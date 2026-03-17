@@ -12,7 +12,7 @@
     "@prisma/client": "^6.19.2",
     "fontkit": "^2.0.4",
     "jszip": "^3.10.1",
-    "next": "16.1.6",
+    "next": "16.1.7",
     "papaparse": "^5.5.3",
     "pdf-lib": "^1.17.1",
     "react": "19.2.3",
