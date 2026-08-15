@@ -1,14 +1,60 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+const EXTENSION_ORIGIN = /^chrome-extension:\/\/[a-p]{32}$/
+
+export const MAX_BATCH_SIZE = 500
+
+function corsFor ( request: NextRequest ): Record<string, string> {
+  const headers: Record<string, string> = { Vary: 'Origin' }
+  const origin = request.headers.get( 'origin' )
+
+  if ( origin && EXTENSION_ORIGIN.test( origin ) ) {
+    headers[ 'Access-Control-Allow-Origin' ] = origin
+    headers[ 'Access-Control-Allow-Methods' ] = 'GET, POST, PUT, OPTIONS'
+    headers[ 'Access-Control-Allow-Headers' ] = 'Content-Type'
+    headers[ 'Access-Control-Max-Age' ] = '600'
+  }
+
+  return headers
 }
 
-export async function OPTIONS () {
-  return NextResponse.json( {}, { headers: corsHeaders } )
+function text ( ...candidates: unknown[] ): string {
+  for ( const candidate of candidates ) {
+    if ( candidate === null || candidate === undefined ) continue
+    const value = String( candidate ).trim()
+    if ( value ) return value
+  }
+  return ''
+}
+
+function numeric ( value: unknown, parse: ( raw: string ) => number ): number | null {
+  if ( value === null || value === undefined || value === '' ) return null
+  const parsed = parse( String( value ).replace( /[^0-9.]/g, '' ) )
+  return Number.isFinite( parsed ) ? parsed : null
+}
+
+function normaliseContact ( item: Record<string, unknown> ) {
+  const name = text( item.name, item.Name )
+  const phone = text( item.phone, item.Phone )
+
+  if ( !name || !phone ) return null
+
+  return {
+    name,
+    phone,
+    email: text( item.email, item.Email ) || null,
+    website: text( item.website, item.Website ) || null,
+    address: text( item.address, item.Address ) || null,
+    category: text( item.category, item.Category ) || null,
+    rating: numeric( item.rating, parseFloat ),
+    reviews: numeric( item.reviews, raw => parseInt( raw, 10 ) ),
+    googleMapsUrl: text( item.googleMapsUrl, item.url, item[ 'Google Maps URL' ] ) || null,
+  }
+}
+
+export async function OPTIONS ( request: NextRequest ) {
+  return NextResponse.json( {}, { headers: corsFor( request ) } )
 }
 
 export async function GET ( request: NextRequest ) {
@@ -58,13 +104,13 @@ export async function GET ( request: NextRequest ) {
           totalPages: Math.ceil( total / limit ),
         },
       },
-      { headers: corsHeaders }
+      { headers: corsFor( request ) }
     )
   } catch ( error ) {
     console.error( 'Get contacts error:', error )
     return NextResponse.json(
       { error: 'Failed to fetch contacts' },
-      { status: 500, headers: corsHeaders }
+      { status: 500, headers: corsFor( request ) }
     )
   }
 }
@@ -81,80 +127,74 @@ export async function POST ( request: NextRequest ) {
     if ( !rawContacts || rawContacts.length === 0 ) {
       return NextResponse.json(
         { error: 'No contacts provided' },
-        { status: 400, headers: corsHeaders }
+        { status: 400, headers: corsFor( request ) }
       )
     }
 
-    let totalProcessed = 0
-    let newContacts = 0
-    let updatedContacts = 0
+    if ( rawContacts.length > MAX_BATCH_SIZE ) {
+      return NextResponse.json(
+        { error: `Batch too large: ${ rawContacts.length } contacts, maximum is ${ MAX_BATCH_SIZE }` },
+        { status: 413, headers: corsFor( request ) }
+      )
+    }
+
+    const byPhone = new Map<string, NonNullable<ReturnType<typeof normaliseContact>>>()
     let skipped = 0
 
     for ( const item of rawContacts ) {
-      const name = ( item.name || item.Name || '' ).trim()
-      const phone = ( item.phone || item.Phone || '' ).trim()
-
-      if ( !name || !phone ) {
+      const normalised = normaliseContact( item )
+      if ( !normalised ) {
         skipped++
         continue
       }
-
-      totalProcessed++
-
-      const ratingVal = item.rating !== undefined && item.rating !== null && item.rating !== ''
-        ? parseFloat( String( item.rating ) )
-        : null
-      const reviewsVal = item.reviews !== undefined && item.reviews !== null && item.reviews !== ''
-        ? parseInt( String( item.reviews ).replace( /[^0-9]/g, '' ), 10 ) || null
-        : null
-
-      const contactData = {
-        name,
-        phone,
-        email: ( item.email || item.Email || '' ).trim() || null,
-        website: ( item.website || item.Website || '' ).trim() || null,
-        address: ( item.address || item.Address || '' ).trim() || null,
-        category: ( item.category || item.Category || '' ).trim() || null,
-        rating: isNaN( ratingVal as number ) ? null : ratingVal,
-        reviews: isNaN( reviewsVal as number ) ? null : reviewsVal,
-        googleMapsUrl: ( item.googleMapsUrl || item.url || item[ 'Google Maps URL' ] || '' ).trim() || null,
-      }
-
-      const existingContact = await prisma.contact.findUnique( {
-        where: { phone },
-      } )
-
-      if ( existingContact ) {
-        await prisma.contact.update( {
-          where: { phone },
-          data: contactData,
-        } )
-        updatedContacts++
-      } else {
-        await prisma.contact.create( {
-          data: contactData,
-        } )
-        newContacts++
-      }
+      byPhone.set( normalised.phone, normalised )
     }
+
+    const pending = [ ...byPhone.values() ]
+
+    if ( pending.length === 0 ) {
+      return NextResponse.json(
+        {
+          success: true,
+          summary: { totalProcessed: 0, newContacts: 0, updatedContacts: 0, skipped },
+        },
+        { headers: corsFor( request ) }
+      )
+    }
+
+    const existing = await prisma.contact.findMany( {
+      where: { phone: { in: pending.map( c => c.phone ) } },
+      select: { phone: true },
+    } )
+    const existingPhones = new Set( existing.map( c => c.phone ) )
+
+    await prisma.$transaction(
+      pending.map( contact => prisma.contact.upsert( {
+        where: { phone: contact.phone },
+        update: contact,
+        create: contact,
+      } ) )
+    )
+
+    const updatedContacts = pending.filter( c => existingPhones.has( c.phone ) ).length
 
     return NextResponse.json(
       {
         success: true,
         summary: {
-          totalProcessed,
-          newContacts,
+          totalProcessed: pending.length,
+          newContacts: pending.length - updatedContacts,
           updatedContacts,
           skipped,
         },
       },
-      { headers: corsHeaders }
+      { headers: corsFor( request ) }
     )
   } catch ( error ) {
     console.error( 'Create/batch contacts error:', error )
     return NextResponse.json(
       { error: 'Failed to process contacts' },
-      { status: 500, headers: corsHeaders }
+      { status: 500, headers: corsFor( request ) }
     )
   }
 }
@@ -167,7 +207,7 @@ export async function PUT ( request: NextRequest ) {
     if ( !id || typeof contacted !== 'boolean' ) {
       return NextResponse.json(
         { error: 'Invalid request body' },
-        { status: 400, headers: corsHeaders }
+        { status: 400, headers: corsFor( request ) }
       )
     }
 
@@ -179,12 +219,12 @@ export async function PUT ( request: NextRequest ) {
       },
     } )
 
-    return NextResponse.json( { success: true, contact }, { headers: corsHeaders } )
+    return NextResponse.json( { success: true, contact }, { headers: corsFor( request ) } )
   } catch ( error ) {
     console.error( 'Update contact error:', error )
     return NextResponse.json(
       { error: 'Failed to update contact' },
-      { status: 500, headers: corsHeaders }
+      { status: 500, headers: corsFor( request ) }
     )
   }
 }
