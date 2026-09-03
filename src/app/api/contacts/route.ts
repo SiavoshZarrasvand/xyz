@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 
 const EXTENSION_ORIGIN = /^chrome-extension:\/\/[a-p]{32}$/
@@ -68,7 +69,7 @@ export async function GET ( request: NextRequest ) {
     const skip = ( page - 1 ) * limit
 
     // Build where clause
-    const where: any = {}
+    const where: Prisma.ContactWhereInput = {}
 
     if ( contactedFilter === 'true' ) {
       where.contacted = true
