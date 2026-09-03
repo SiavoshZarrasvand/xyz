@@ -11,6 +11,7 @@ interface Contact {
   website: string | null
   address: string | null
   category: string | null
+  tag: string | null
   rating: number | null
   reviews: number | null
   googleMapsUrl: string | null
@@ -23,10 +24,15 @@ function ContactsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [contacts, setContacts] = useState<Contact[]>([])
+  const [availableTags, setAvailableTags] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
+  const [isClearing, setIsClearing] = useState(false)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<string>(
     searchParams.get('contacted') || 'all'
+  )
+  const [tagFilter, setTagFilter] = useState<string>(
+    searchParams.get('tag') || 'all'
   )
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
@@ -38,19 +44,21 @@ function ContactsContent() {
         page: page.toString(),
         limit: '50',
         ...(filter !== 'all' && { contacted: filter }),
+        ...(tagFilter !== 'all' && { tag: tagFilter }),
         ...(search && { search }),
       })
 
       const response = await fetch(`/api/contacts?${params}`)
       const data = await response.json()
       setContacts(data.contacts || [])
+      setAvailableTags(data.tags || [])
       setTotalPages(data.pagination?.totalPages || 1)
     } catch (error) {
       console.error('Failed to fetch contacts:', error)
     } finally {
       setLoading(false)
     }
-  }, [filter, page, search])
+  }, [filter, tagFilter, page, search])
 
   useEffect(() => {
     fetchContacts()
@@ -66,6 +74,33 @@ function ContactsContent() {
       fetchContacts()
     } catch (error) {
       console.error('Failed to update contact:', error)
+    }
+  }
+
+  const handleClearContacts = async () => {
+    const isSpecificRun = tagFilter !== 'all'
+    const promptMsg = isSpecificRun
+      ? `Are you sure you want to delete all contacts from the run "${tagFilter}"?`
+      : 'Are you sure you want to clear all contacts from the database? This action cannot be undone.'
+
+    if (!window.confirm(promptMsg)) return
+
+    setIsClearing(true)
+    try {
+      const url = isSpecificRun
+        ? `/api/contacts?tag=${encodeURIComponent(tagFilter)}`
+        : '/api/contacts?all=true'
+
+      const res = await fetch(url, { method: 'DELETE' })
+      if (res.ok) {
+        if (isSpecificRun) setTagFilter('all')
+        setPage(1)
+        fetchContacts()
+      }
+    } catch (err) {
+      console.error('Failed to clear contacts:', err)
+    } finally {
+      setIsClearing(false)
     }
   }
 
@@ -91,24 +126,75 @@ function ContactsContent() {
 
       <main className="max-w-7xl mx-auto px-8 py-8">
         <div className="space-y-6">
-          {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <input
-              type="text"
-              placeholder="Search by name, phone, or category..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-            <select
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className="px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+          {/* Filters and Actions */}
+          <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
+            <div className="flex flex-col sm:flex-row gap-3 flex-1">
+              <input
+                type="text"
+                placeholder="Search by name, phone, or category..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value)
+                  setPage(1)
+                }}
+                className="flex-1 px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+              />
+              <select
+                value={filter}
+                onChange={(e) => {
+                  setFilter(e.target.value)
+                  setPage(1)
+                }}
+                className="px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+              >
+                <option value="all">All Statuses</option>
+                <option value="true">Contacted</option>
+                <option value="false">Not Contacted</option>
+              </select>
+              <select
+                value={tagFilter}
+                onChange={(e) => {
+                  setTagFilter(e.target.value)
+                  setPage(1)
+                }}
+                className="px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm max-w-[220px] truncate"
+              >
+                <option value="all">All Runs ({availableTags.length})</option>
+                {availableTags.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              onClick={handleClearContacts}
+              disabled={isClearing || contacts.length === 0}
+              className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 shrink-0"
+              title={tagFilter === 'all' ? 'Delete all contacts' : `Delete run "${tagFilter}"`}
             >
-              <option value="all">All Contacts</option>
-              <option value="true">Contacted</option>
-              <option value="false">Not Contacted</option>
-            </select>
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
+              <span>
+                {isClearing
+                  ? 'Deleting...'
+                  : tagFilter === 'all'
+                  ? 'Clear Database'
+                  : 'Delete this Run'}
+              </span>
+            </button>
           </div>
 
           {/* Table */}
@@ -118,7 +204,7 @@ function ContactsContent() {
             </div>
           ) : contacts.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
-              No contacts found. Upload some CSV or ZIP files to get started.
+              No contacts found.
             </div>
           ) : (
             <div className="overflow-x-auto border border-border rounded-lg">
@@ -156,11 +242,18 @@ function ContactsContent() {
                           <span className="font-medium text-foreground">
                             {contact.name}
                           </span>
-                          {contact.address && (
-                            <span className="text-xs text-muted-foreground mt-1">
-                              {contact.address}
-                            </span>
-                          )}
+                          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                            {contact.tag && (
+                              <span className="text-[10px] px-1.5 py-0.5 bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-300 rounded border border-purple-100 dark:border-purple-800">
+                                {contact.tag}
+                              </span>
+                            )}
+                            {contact.address && (
+                              <span className="text-xs text-muted-foreground">
+                                {contact.address}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm">
