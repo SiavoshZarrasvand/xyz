@@ -57,7 +57,19 @@ export async function POST ( request: NextRequest ) {
       }
     }
 
-    // Parse and import all CSV content
+    const byPhone = new Map<string, {
+      name: string
+      phone: string
+      email: string | null
+      website: string | null
+      address: string | null
+      category: string | null
+      rating: number | null
+      reviews: number | null
+      googleMapsUrl: string | null
+    }>()
+
+    // Parse and collect all CSV content
     for ( const csvText of allCsvContent ) {
       const parseResult = Papa.parse<CSVRow>( csvText, {
         header: true,
@@ -71,14 +83,7 @@ export async function POST ( request: NextRequest ) {
         const phone = row.Phone.trim()
         if ( !phone ) continue
 
-        totalContacts++
-
-        // Upsert contact (deduplicate by phone)
-        const existingContact = await prisma.contact.findUnique( {
-          where: { phone },
-        } )
-
-        const contactData = {
+        byPhone.set( phone, {
           name: row.Name.trim(),
           phone,
           email: row.Email?.trim() || null,
@@ -88,21 +93,30 @@ export async function POST ( request: NextRequest ) {
           rating: row.Rating ? parseFloat( row.Rating ) : null,
           reviews: row.Reviews ? parseInt( row.Reviews, 10 ) : null,
           googleMapsUrl: row[ 'Google Maps URL' ]?.trim() || null,
-        }
-
-        if ( existingContact ) {
-          await prisma.contact.update( {
-            where: { phone },
-            data: contactData,
-          } )
-          updatedContacts++
-        } else {
-          await prisma.contact.create( {
-            data: contactData,
-          } )
-          newContacts++
-        }
+        } )
       }
+    }
+
+    const pending = [ ...byPhone.values() ]
+
+    if ( pending.length > 0 ) {
+      const existing = await prisma.contact.findMany( {
+        where: { phone: { in: pending.map( c => c.phone ) } },
+        select: { phone: true },
+      } )
+      const existingPhones = new Set( existing.map( c => c.phone ) )
+
+      await prisma.$transaction(
+        pending.map( contact => prisma.contact.upsert( {
+          where: { phone: contact.phone },
+          update: contact,
+          create: contact,
+        } ) )
+      )
+
+      updatedContacts = pending.filter( c => existingPhones.has( c.phone ) ).length
+      newContacts = pending.length - updatedContacts
+      totalContacts = pending.length
     }
 
     return NextResponse.json( {
