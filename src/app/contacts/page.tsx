@@ -28,8 +28,8 @@ function ContactsContent() {
   const [loading, setLoading] = useState(true)
   const [isClearing, setIsClearing] = useState(false)
   const [search, setSearch] = useState('')
-  const [filter, setFilter] = useState<string>(
-    searchParams.get('contacted') || 'all'
+  const [onlyPending, setOnlyPending] = useState<boolean>(
+    searchParams.get('pending') === 'true' || searchParams.get('contacted') === 'false'
   )
   const [tagFilter, setTagFilter] = useState<string>(
     searchParams.get('tag') || 'all'
@@ -43,9 +43,9 @@ function ContactsContent() {
       const params = new URLSearchParams({
         page: page.toString(),
         limit: '50',
-        ...(filter !== 'all' && { contacted: filter }),
-        ...(tagFilter !== 'all' && { tag: tagFilter }),
-        ...(search && { search }),
+        ...(onlyPending ? { contacted: 'false' } : {}),
+        ...(tagFilter !== 'all' ? { tag: tagFilter } : {}),
+        ...(search ? { search } : {}),
       })
 
       const response = await fetch(`/api/contacts?${params}`)
@@ -58,7 +58,7 @@ function ContactsContent() {
     } finally {
       setLoading(false)
     }
-  }, [filter, tagFilter, page, search])
+  }, [onlyPending, tagFilter, page, search])
 
   useEffect(() => {
     fetchContacts()
@@ -127,8 +127,8 @@ function ContactsContent() {
       <main className="max-w-7xl mx-auto px-8 py-8">
         <div className="space-y-6">
           {/* Filters and Actions */}
-          <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
-            <div className="flex flex-col sm:flex-row gap-3 flex-1">
+          <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+            <div className="flex flex-col sm:flex-row gap-3 flex-1 items-stretch sm:items-center">
               <input
                 type="text"
                 placeholder="Search by name, phone, or category..."
@@ -137,27 +137,27 @@ function ContactsContent() {
                   setSearch(e.target.value)
                   setPage(1)
                 }}
-                className="flex-1 px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                className="flex-1 px-4 py-2 bg-background border border-border rounded-lg outline-none focus:border-foreground/40 transition-colors text-sm"
               />
-              <select
-                value={filter}
-                onChange={(e) => {
-                  setFilter(e.target.value)
-                  setPage(1)
-                }}
-                className="px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-              >
-                <option value="all">All Statuses</option>
-                <option value="true">Contacted</option>
-                <option value="false">Not Contacted</option>
-              </select>
+              <label className="flex items-center gap-2 px-3 py-2 bg-background border border-border rounded-lg cursor-pointer select-none text-sm text-foreground hover:bg-muted/30 transition-colors shrink-0">
+                <input
+                  type="checkbox"
+                  checked={onlyPending}
+                  onChange={(e) => {
+                    setOnlyPending(e.target.checked)
+                    setPage(1)
+                  }}
+                  className="w-4 h-4 cursor-pointer accent-primary"
+                />
+                <span>Pending only</span>
+              </label>
               <select
                 value={tagFilter}
                 onChange={(e) => {
                   setTagFilter(e.target.value)
                   setPage(1)
                 }}
-                className="px-3 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm max-w-[220px] truncate"
+                className="px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-foreground/40 transition-colors text-sm max-w-[220px] truncate"
               >
                 <option value="all">All Runs ({availableTags.length})</option>
                 {availableTags.map((t) => (

@@ -106,13 +106,13 @@ export default function Home() {
           <div className="flex gap-4">
             <button
               onClick={() => router.push('/contacts')}
-              className="px-6 py-3 bg-primary text-primary-foreground rounded-lg font-semibold hover:opacity-90 transition-all shadow-lg shadow-primary/20"
+              className="px-5 py-2.5 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity text-sm"
             >
               View All Contacts
             </button>
             <button
-              onClick={() => router.push('/contacts?contacted=false')}
-              className="px-6 py-3 bg-background border border-border rounded-lg font-semibold hover:bg-muted transition-all"
+              onClick={() => router.push('/contacts?pending=true')}
+              className="px-5 py-2.5 bg-background border border-border rounded-lg font-medium hover:bg-muted/50 transition-colors text-sm text-foreground"
             >
               View Pending Contacts
             </button>
