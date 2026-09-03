@@ -18,6 +18,7 @@ model Contact {
   website       String?
   address       String?
   category      String?
+  tag           String?
   rating        Float?
   reviews       Int?
   googleMapsUrl String?
@@ -29,4 +30,5 @@ model Contact {
 
   @@index([contacted])
   @@index([phone])
+  @@index([tag])
 }

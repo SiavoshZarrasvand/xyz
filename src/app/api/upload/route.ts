@@ -8,6 +8,7 @@ interface CSVRow {
   Rating: string
   Reviews: string
   Category: string
+  Tag?: string
   Address: string
   Phone: string
   Email: string
@@ -64,6 +65,7 @@ export async function POST ( request: NextRequest ) {
       website: string | null
       address: string | null
       category: string | null
+      tag: string | null
       rating: number | null
       reviews: number | null
       googleMapsUrl: string | null
@@ -90,6 +92,7 @@ export async function POST ( request: NextRequest ) {
           website: row.Website?.trim() || null,
           address: row.Address?.trim() || null,
           category: row.Category?.trim() || null,
+          tag: row.Tag?.trim() || null,
           rating: row.Rating ? parseFloat( row.Rating ) : null,
           reviews: row.Reviews ? parseInt( row.Reviews, 10 ) : null,
           googleMapsUrl: row[ 'Google Maps URL' ]?.trim() || null,
