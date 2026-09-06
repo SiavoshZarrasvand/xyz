@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
+import { broadcastCrmEvent } from '@/lib/events'
 
 const EXTENSION_ORIGIN = /^chrome-extension:\/\/[a-p]{32}$/
 
@@ -79,7 +80,9 @@ export async function GET ( request: NextRequest ) {
       where.contacted = false
     }
 
-    if ( tagFilter && tagFilter !== 'all' ) {
+    if ( tagFilter === '__untagged__' ) {
+      where.tag = null
+    } else if ( tagFilter && tagFilter !== 'all' ) {
       where.tag = tagFilter
     }
 
@@ -92,7 +95,7 @@ export async function GET ( request: NextRequest ) {
       ]
     }
 
-    const [ contacts, total, tagsData ] = await Promise.all( [
+    const [ contacts, total, tagsData, untaggedCount ] = await Promise.all( [
       prisma.contact.findMany( {
         where,
         skip,
@@ -100,19 +103,22 @@ export async function GET ( request: NextRequest ) {
         orderBy: { createdAt: 'desc' },
       } ),
       prisma.contact.count( { where } ),
-      prisma.contact.findMany( {
+      prisma.contact.groupBy( {
+        by: [ 'tag' ],
+        _count: { id: true },
         where: { tag: { not: null } },
-        select: { tag: true },
-        distinct: [ 'tag' ],
+        orderBy: { _count: { id: 'desc' } },
       } ),
+      prisma.contact.count( { where: { tag: null } } ),
     ] )
 
-    const tags = tagsData.map( t => t.tag ).filter( Boolean ) as string[]
+    const tags = tagsData.map( t => ( { name: t.tag as string, count: t._count.id } ) )
 
     return NextResponse.json(
       {
         contacts,
         tags,
+        untaggedCount,
         pagination: {
           total,
           page,
@@ -194,6 +200,12 @@ export async function POST ( request: NextRequest ) {
 
     const updatedContacts = pending.filter( c => existingPhones.has( c.phone ) ).length
 
+    broadcastCrmEvent( {
+      type: 'CONTACTS_UPDATED',
+      total: pending.length,
+      timestamp: Date.now(),
+    } )
+
     return NextResponse.json(
       {
         success: true,
@@ -235,6 +247,12 @@ export async function PUT ( request: NextRequest ) {
       },
     } )
 
+    broadcastCrmEvent( {
+      type: 'CONTACTS_UPDATED',
+      total: 1,
+      timestamp: Date.now(),
+    } )
+
     return NextResponse.json( { success: true, contact }, { headers: corsFor( request ) } )
   } catch ( error ) {
     console.error( 'Update contact error:', error )
@@ -254,14 +272,37 @@ export async function DELETE ( request: NextRequest ) {
 
     if ( all ) {
       const result = await prisma.contact.deleteMany( {} )
+      broadcastCrmEvent( {
+        type: 'CONTACTS_DELETED',
+        count: result.count,
+        timestamp: Date.now(),
+      } )
       return NextResponse.json(
         { success: true, message: 'All contacts cleared', count: result.count },
         { headers: corsFor( request ) }
       )
     }
 
+    if ( tag === '__untagged__' ) {
+      const result = await prisma.contact.deleteMany( { where: { tag: null } } )
+      broadcastCrmEvent( {
+        type: 'CONTACTS_DELETED',
+        count: result.count,
+        timestamp: Date.now(),
+      } )
+      return NextResponse.json(
+        { success: true, message: 'Deleted untagged contacts', count: result.count },
+        { headers: corsFor( request ) }
+      )
+    }
+
     if ( tag ) {
       const result = await prisma.contact.deleteMany( { where: { tag } } )
+      broadcastCrmEvent( {
+        type: 'CONTACTS_DELETED',
+        count: result.count,
+        timestamp: Date.now(),
+      } )
       return NextResponse.json(
         { success: true, message: `Deleted contacts for tag: ${ tag }`, count: result.count },
         { headers: corsFor( request ) }
@@ -270,6 +311,11 @@ export async function DELETE ( request: NextRequest ) {
 
     if ( id ) {
       const deleted = await prisma.contact.delete( { where: { id } } )
+      broadcastCrmEvent( {
+        type: 'CONTACTS_DELETED',
+        count: 1,
+        timestamp: Date.now(),
+      } )
       return NextResponse.json(
         { success: true, contact: deleted },
         { headers: corsFor( request ) }
