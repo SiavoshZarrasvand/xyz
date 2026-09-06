@@ -91,11 +91,18 @@ function ContactsContent() {
       }
     }
 
+    const pollInterval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchContacts()
+      }
+    }, 2500)
+
     document.addEventListener('visibilitychange', onVisibilityChange)
     window.addEventListener('focus', fetchContacts)
 
     return () => {
       eventSource.close()
+      clearInterval(pollInterval)
       document.removeEventListener('visibilitychange', onVisibilityChange)
       window.removeEventListener('focus', fetchContacts)
     }
