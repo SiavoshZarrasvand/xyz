@@ -20,11 +20,18 @@ interface Contact {
   createdAt: string
 }
 
+interface TagInfo {
+  name: string
+  count: number
+}
+
 function ContactsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [contacts, setContacts] = useState<Contact[]>([])
-  const [availableTags, setAvailableTags] = useState<string[]>([])
+  const [availableTags, setAvailableTags] = useState<TagInfo[]>([])
+  const [untaggedCount, setUntaggedCount] = useState(0)
+  const [totalContacts, setTotalContacts] = useState(0)
   const [loading, setLoading] = useState(true)
   const [isClearing, setIsClearing] = useState(false)
   const [search, setSearch] = useState('')
@@ -52,6 +59,8 @@ function ContactsContent() {
       const data = await response.json()
       setContacts(data.contacts || [])
       setAvailableTags(data.tags || [])
+      setUntaggedCount(data.untaggedCount || 0)
+      setTotalContacts(data.pagination?.total || 0)
       setTotalPages(data.pagination?.totalPages || 1)
     } catch (error) {
       console.error('Failed to fetch contacts:', error)
@@ -60,8 +69,36 @@ function ContactsContent() {
     }
   }, [onlyPending, tagFilter, page, search])
 
+  // Initial fetch and real-time SSE listener
   useEffect(() => {
     fetchContacts()
+
+    const eventSource = new EventSource('/api/events')
+    eventSource.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data)
+        if (payload.type === 'CONTACTS_UPDATED' || payload.type === 'CONTACTS_DELETED') {
+          fetchContacts()
+        }
+      } catch (err) {
+        console.error('Failed to parse SSE payload:', err)
+      }
+    }
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchContacts()
+      }
+    }
+
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    window.addEventListener('focus', fetchContacts)
+
+    return () => {
+      eventSource.close()
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      window.removeEventListener('focus', fetchContacts)
+    }
   }, [fetchContacts])
 
   const toggleContacted = async (id: string, currentStatus: boolean) => {
@@ -80,7 +117,9 @@ function ContactsContent() {
   const handleClearContacts = async () => {
     const isSpecificRun = tagFilter !== 'all'
     const promptMsg = isSpecificRun
-      ? `Are you sure you want to delete all contacts from the run "${tagFilter}"?`
+      ? tagFilter === '__untagged__'
+        ? 'Are you sure you want to delete all untagged contacts?'
+        : `Are you sure you want to delete all contacts from the run "${tagFilter}"?`
       : 'Are you sure you want to clear all contacts from the database? This action cannot be undone.'
 
     if (!window.confirm(promptMsg)) return
@@ -157,14 +196,19 @@ function ContactsContent() {
                   setTagFilter(e.target.value)
                   setPage(1)
                 }}
-                className="px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-foreground/40 transition-colors text-sm max-w-[220px] truncate"
+                className="px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-foreground/40 transition-colors text-sm max-w-[240px] truncate"
               >
-                <option value="all">All Runs ({availableTags.length})</option>
+                <option value="all">All Runs ({totalContacts})</option>
                 {availableTags.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
+                  <option key={t.name} value={t.name}>
+                    {t.name} ({t.count})
                   </option>
                 ))}
+                {untaggedCount > 0 && (
+                  <option value="__untagged__">
+                    Untagged ({untaggedCount})
+                  </option>
+                )}
               </select>
             </div>
 
