@@ -329,13 +329,13 @@ function ContactsContent() {
                       </td>
                       <td className="px-4 py-3 text-sm">
                         {contact.phone ? (
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-col gap-1">
                             <a
                               href={`https://wa.me/${contact.phone.replace(/\D/g, '')}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               title="Open WhatsApp chat"
-                              className="text-primary hover:underline flex items-center gap-1"
+                              className="text-primary hover:underline flex items-center gap-1 truncate"
                             >
                               <svg
                                 className="w-4 h-4 text-emerald-600 shrink-0"
@@ -351,15 +351,16 @@ function ContactsContent() {
                               target="_blank"
                               rel="noopener noreferrer"
                               title="Open Telegram chat"
-                              className="text-sky-500 hover:text-sky-600 transition-colors p-1 hover:bg-sky-50 dark:hover:bg-sky-950/30 rounded inline-flex items-center"
+                              className="text-sky-500 hover:text-sky-600 hover:underline flex items-center gap-1 truncate text-xs"
                             >
                               <svg
-                                className="w-4 h-4 shrink-0"
+                                className="w-3.5 h-3.5 shrink-0"
                                 fill="currentColor"
                                 viewBox="0 0 24 24"
                               >
                                 <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.121l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.832.946z" />
                               </svg>
+                              <span>Telegram</span>
                             </a>
                           </div>
                         ) : (
