@@ -103,18 +103,25 @@ export default function Home() {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-4">
             <button
               onClick={() => router.push('/contacts')}
               className="px-5 py-2.5 bg-primary text-primary-foreground rounded-lg font-medium hover:opacity-90 transition-opacity text-sm"
             >
-              View All Contacts
+              View Maps Contacts
             </button>
             <button
               onClick={() => router.push('/contacts?pending=true')}
               className="px-5 py-2.5 bg-background border border-border rounded-lg font-medium hover:bg-muted/50 transition-colors text-sm text-foreground"
             >
               View Pending Contacts
+            </button>
+            <button
+              onClick={() => router.push('/in-cosmetics')}
+              className="px-5 py-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 rounded-lg font-medium transition-colors text-sm flex items-center gap-1.5"
+            >
+              <span>🧴</span>
+              <span>In-Cosmetics Exhibitors</span>
             </button>
           </div>
         </div>

@@ -32,3 +32,29 @@ model Contact {
   @@index([phone])
   @@index([tag])
 }
+
+model InCosmeticsExhibitor {
+  id          String    @id @default(uuid())
+  name        String
+  stand       String?
+  whyVisit    String?
+  description String?
+  website     String?
+  email       String?
+  phone       String?
+  street      String?
+  city        String?
+  postcode    String?
+  country     String?
+  address     String?
+  url         String?   @unique
+  contacted   Boolean   @default(false)
+  contactedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([contacted])
+  @@index([country])
+  @@index([stand])
+}
+

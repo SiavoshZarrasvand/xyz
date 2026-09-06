@@ -156,12 +156,25 @@ function ContactsContent() {
       {/* Header */}
       <header className="border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-8 py-4 flex items-center justify-between">
-          <button
-            onClick={() => router.push('/')}
-            className="text-2xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent hover:opacity-80 transition-opacity"
-          >
-            XYZ
-          </button>
+          <div className="flex items-center gap-6">
+            <button
+              onClick={() => router.push('/')}
+              className="text-2xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent hover:opacity-80 transition-opacity"
+            >
+              XYZ
+            </button>
+            <nav className="flex items-center gap-2">
+              <span className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-muted/60 text-foreground border border-border">
+                Maps Contacts
+              </span>
+              <button
+                onClick={() => router.push('/in-cosmetics')}
+                className="px-3 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                In-Cosmetics Global
+              </button>
+            </nav>
+          </div>
           <button
             onClick={() => router.push('/')}
             className="text-sm text-muted-foreground hover:text-foreground transition-colors"

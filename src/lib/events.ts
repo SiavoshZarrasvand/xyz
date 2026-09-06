@@ -16,6 +16,8 @@ export type CRMEvent =
   | { type: 'CONNECTED'; timestamp: number }
   | { type: 'CONTACTS_UPDATED'; total: number; timestamp: number }
   | { type: 'CONTACTS_DELETED'; count: number; timestamp: number }
+  | { type: 'INCOSMETICS_UPDATED'; total: number; timestamp: number }
+  | { type: 'INCOSMETICS_DELETED'; count: number; timestamp: number }
 
 export function broadcastCrmEvent ( event: CRMEvent ) {
   crmEvents.emit( 'event', event )
