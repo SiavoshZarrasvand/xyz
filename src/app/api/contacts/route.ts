@@ -38,15 +38,18 @@ function numeric ( value: unknown, parse: ( raw: string ) => number ): number | 
 
 function normaliseContact ( item: Record<string, unknown> ) {
   const name = text( item.name, item.Name )
-  const phone = text( item.phone, item.Phone )
+  const phone = text( item.phone, item.Phone ) || null
+  const email = text( item.email, item.Email ) || null
+  const website = text( item.website, item.Website ) || null
 
-  if ( !name || !phone ) return null
+  // Require name and at least one communication channel (phone, email, or website)
+  if ( !name || ( !phone && !email && !website ) ) return null
 
   return {
     name,
     phone,
-    email: text( item.email, item.Email ) || null,
-    website: text( item.website, item.Website ) || null,
+    email,
+    website,
     address: text( item.address, item.Address ) || null,
     category: text( item.category, item.Category ) || null,
     tag: text( item.tag, item.Tag, item.query, item.searchQuery, item.sourceQuery ) || null,
@@ -160,21 +163,35 @@ export async function POST ( request: NextRequest ) {
       )
     }
 
-    const byPhone = new Map<string, NonNullable<ReturnType<typeof normaliseContact>>>()
+    console.log( `[CRM API] 📥 Received ${ rawContacts.length } contact(s) to process.` )
+
+    const dedupMap = new Map<string, NonNullable<ReturnType<typeof normaliseContact>>>()
     let skipped = 0
 
     for ( const item of rawContacts ) {
       const normalised = normaliseContact( item )
       if ( !normalised ) {
         skipped++
+        const itemName = ( item && ( ( item as Record<string, unknown> ).name || ( item as Record<string, unknown> ).Name ) ) || 'Unknown'
+        console.log( `[CRM API] ⚠️  Skipped "${ itemName }": missing phone, email, and website.` )
         continue
       }
-      byPhone.set( normalised.phone, normalised )
+      const key = normalised.phone
+        ? `phone:${normalised.phone}`
+        : normalised.googleMapsUrl
+        ? `maps:${normalised.googleMapsUrl}`
+        : normalised.website
+        ? `web:${normalised.name}:${normalised.website}`
+        : normalised.email
+        ? `email:${normalised.email}`
+        : `name:${normalised.name}:${normalised.address || ''}`
+      dedupMap.set( key, normalised )
     }
 
-    const pending = [ ...byPhone.values() ]
+    const pending = [ ...dedupMap.values() ]
 
     if ( pending.length === 0 ) {
+      console.log( `[CRM API] ⚠️  No valid contacts in batch (${ skipped } skipped).` )
       return NextResponse.json(
         {
           success: true,
@@ -184,21 +201,59 @@ export async function POST ( request: NextRequest ) {
       )
     }
 
-    const existing = await prisma.contact.findMany( {
-      where: { phone: { in: pending.map( c => c.phone ) } },
-      select: { phone: true },
+    const phones = pending.map( c => c.phone ).filter( Boolean ) as string[]
+    const mapsUrls = pending.map( c => c.googleMapsUrl ).filter( Boolean ) as string[]
+    const websites = pending.map( c => c.website ).filter( Boolean ) as string[]
+    const emails = pending.map( c => c.email ).filter( Boolean ) as string[]
+
+    const orConditions: Prisma.ContactWhereInput[] = []
+    if ( phones.length > 0 ) orConditions.push( { phone: { in: phones } } )
+    if ( mapsUrls.length > 0 ) orConditions.push( { googleMapsUrl: { in: mapsUrls } } )
+    if ( websites.length > 0 ) orConditions.push( { website: { in: websites } } )
+    if ( emails.length > 0 ) orConditions.push( { email: { in: emails } } )
+
+    const existing = orConditions.length > 0
+      ? await prisma.contact.findMany( {
+          where: { OR: orConditions },
+        } )
+      : []
+
+    let updatedContacts = 0
+    let newContacts = 0
+
+    await prisma.$transaction( async ( tx ) => {
+      for ( const contact of pending ) {
+        const match = existing.find( ( ex ) =>
+          ( contact.phone && ex.phone === contact.phone ) ||
+          ( contact.googleMapsUrl && ex.googleMapsUrl === contact.googleMapsUrl ) ||
+          ( contact.website && ex.website === contact.website && ex.name === contact.name ) ||
+          ( contact.email && ex.email === contact.email )
+        )
+
+        if ( match ) {
+          await tx.contact.update( {
+            where: { id: match.id },
+            data: contact,
+          } )
+          updatedContacts++
+        } else {
+          await tx.contact.create( {
+            data: contact,
+          } )
+          newContacts++
+        }
+      }
     } )
-    const existingPhones = new Set( existing.map( c => c.phone ) )
 
-    await prisma.$transaction(
-      pending.map( contact => prisma.contact.upsert( {
-        where: { phone: contact.phone },
-        update: contact,
-        create: contact,
-      } ) )
-    )
-
-    const updatedContacts = pending.filter( c => existingPhones.has( c.phone ) ).length
+    if ( pending.length === 1 ) {
+      const c = pending[ 0 ]
+      console.log( `[CRM API] ✅ Saved "${ c.name }" (phone: ${ c.phone || 'none' }, web: ${ c.website ? 'yes' : 'none' }, tag: "${ c.tag || 'none' }")` )
+    } else {
+      console.log(
+        `[CRM API] ✅ Processed batch of ${ pending.length } contacts: ` +
+        `${ newContacts } new, ${ updatedContacts } updated, ${ skipped } skipped.`
+      )
+    }
 
     broadcastCrmEvent( {
       type: 'CONTACTS_UPDATED',
@@ -211,7 +266,7 @@ export async function POST ( request: NextRequest ) {
         success: true,
         summary: {
           totalProcessed: pending.length,
-          newContacts: pending.length - updatedContacts,
+          newContacts,
           updatedContacts,
           skipped,
         },
@@ -221,7 +276,7 @@ export async function POST ( request: NextRequest ) {
   } catch ( error ) {
     console.error( 'Create/batch contacts error:', error )
     return NextResponse.json(
-      { error: 'Failed to process contacts' },
+      { error: 'Failed to process contacts', details: error instanceof Error ? error.message : String( error ) },
       { status: 500, headers: corsFor( request ) }
     )
   }

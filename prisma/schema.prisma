@@ -13,7 +13,7 @@ datasource db {
 model Contact {
   id            String    @id @default(uuid())
   name          String
-  phone         String    @unique
+  phone         String?   @unique
   email         String?
   website       String?
   address       String?
