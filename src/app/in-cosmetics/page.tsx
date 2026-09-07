@@ -185,6 +185,12 @@ function InCosmeticsContent () {
               <span className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-muted/60 text-foreground border border-border">
                 In-Cosmetics Global
               </span>
+              <button
+                onClick={ () => router.push( '/alla-bolag' ) }
+                className="px-3 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                🇸🇪 Alla Bolag
+              </button>
             </nav>
           </div>
           <button

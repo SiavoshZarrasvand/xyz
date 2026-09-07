@@ -173,6 +173,12 @@ function ContactsContent() {
               >
                 In-Cosmetics Global
               </button>
+              <button
+                onClick={() => router.push('/alla-bolag')}
+                className="px-3 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                🇸🇪 Alla Bolag
+              </button>
             </nav>
           </div>
           <button
