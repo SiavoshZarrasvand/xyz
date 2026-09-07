@@ -8,6 +8,7 @@ interface Company {
   name: string
   orgnr: string | null
   phone: string | null
+  email: string | null
   street: string | null
   postcode: string | null
   city: string | null
@@ -43,6 +44,13 @@ function AllaBolagContent () {
   )
   const [ page, setPage ] = useState( 1 )
   const [ totalPages, setTotalPages ] = useState( 1 )
+  const [ copiedId, setCopiedId ] = useState<string | null>( null )
+
+  const copyToClipboard = ( text: string, id: string ) => {
+    navigator.clipboard.writeText( text )
+    setCopiedId( id )
+    setTimeout( () => setCopiedId( null ), 2000 )
+  }
 
   const fetchCompanies = useCallback( async ( isInitial = false ) => {
     if ( isInitial ) setLoading( true )
@@ -128,6 +136,32 @@ function AllaBolagContent () {
     } catch ( err ) {
       console.error( 'Failed to delete company:', err )
     }
+  }
+
+  const handleExportCsv = () => {
+    if ( companies.length === 0 ) return
+    const headers = [ 'Name', 'Org.nr', 'Telefon', 'E-post', 'Address', 'Street', 'Postcode', 'City', 'URL', 'Contacted' ]
+    const escape = ( v: unknown ) => ( v ? `"${ String( v ).replace( /"/g, '""' ) }"` : '""' )
+    const rows = companies.map( c => [
+      escape( c.name ),
+      escape( c.orgnr ),
+      escape( c.phone ),
+      escape( c.email ),
+      escape( c.address ),
+      escape( c.street ),
+      escape( c.postcode ),
+      escape( c.city ),
+      escape( c.url ),
+      escape( c.contacted ? 'Yes' : 'No' ),
+    ].join( ',' ) )
+    const csvContent = '\uFEFF' + [ headers.join( ',' ), ...rows ].join( '\n' )
+    const blob = new Blob( [ csvContent ], { type: 'text/csv;charset=utf-8;' } )
+    const url = URL.createObjectURL( blob )
+    const a = document.createElement( 'a' )
+    a.href = url
+    a.download = `alla-bolag-companies-${ new Date().toISOString().slice( 0, 10 ) }.csv`
+    a.click()
+    URL.revokeObjectURL( url )
   }
 
   const handleClearAll = async () => {
@@ -259,14 +293,25 @@ function AllaBolagContent () {
               </select>
             </div>
 
-            <button
-              onClick={ handleClearAll }
-              disabled={ isClearing || companies.length === 0 }
-              className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 shrink-0"
-              title="Clear all companies"
-            >
-              <span>{ isClearing ? 'Clearing...' : 'Clear Database' }</span>
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={ handleExportCsv }
+                disabled={ companies.length === 0 }
+                className="px-4 py-2 bg-muted/60 hover:bg-muted text-foreground border border-border rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                title="Export currently loaded companies to CSV"
+              >
+                <span>📥 Export CSV</span>
+              </button>
+
+              <button
+                onClick={ handleClearAll }
+                disabled={ isClearing || companies.length === 0 }
+                className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                title="Clear all companies"
+              >
+                <span>{ isClearing ? 'Clearing...' : 'Clear Database' }</span>
+              </button>
+            </div>
           </div>
 
           {/* Table */}
@@ -284,6 +329,7 @@ function AllaBolagContent () {
                     <th className="px-4 py-3 text-sm font-semibold text-foreground w-[260px]">Company</th>
                     <th className="px-4 py-3 text-sm font-semibold text-foreground w-[150px]">Org.nr</th>
                     <th className="px-4 py-3 text-sm font-semibold text-foreground w-[180px]">Telefon</th>
+                    <th className="px-4 py-3 text-sm font-semibold text-foreground w-[200px]">E-post</th>
                     <th className="px-4 py-3 text-sm font-semibold text-foreground min-w-[220px]">Address</th>
                     <th className="px-4 py-3 text-sm font-semibold text-foreground w-[140px]">City / Ort</th>
                     <th className="px-4 py-3 text-center text-sm font-semibold text-foreground w-[90px]">Contacted</th>
@@ -360,6 +406,31 @@ function AllaBolagContent () {
                                 <span>Telegram</span>
                               </a>
                             </div>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        ) }
+                      </td>
+
+                      {/* E-post */}
+                      <td className="px-4 py-3 text-xs">
+                        { company.email ? (
+                          <div className="flex items-center gap-1.5">
+                            <a
+                              href={ `mailto:${ company.email }` }
+                              className="font-medium text-foreground hover:text-primary hover:underline truncate max-w-[180px]"
+                              title={ `Send email to ${ company.email }` }
+                            >
+                              <span>✉️</span>
+                              <span className="truncate">{ company.email }</span>
+                            </a>
+                            <button
+                              onClick={ () => copyToClipboard( company.email!, company.id + '-email' ) }
+                              className="text-[10px] opacity-60 hover:opacity-100 text-muted-foreground transition-opacity shrink-0"
+                              title="Copy email"
+                            >
+                              { copiedId === company.id + '-email' ? '✓' : '📋' }
+                            </button>
                           </div>
                         ) : (
                           <span className="text-muted-foreground">-</span>

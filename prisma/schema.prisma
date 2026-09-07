@@ -63,6 +63,7 @@ model AllaBolagCompany {
   name        String
   orgnr       String?
   phone       String?
+  email       String?
   street      String?
   postcode    String?
   city        String?

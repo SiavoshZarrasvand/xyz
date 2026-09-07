@@ -53,6 +53,8 @@ function normaliseCompany ( item: Record<string, unknown> ) {
       : null
   ) || null
 
+  const email = text( item.email, item.mail, item.emailAddress, item.ePost ) || null
+
   let street = text( item.street, item.addressLine, item.gatuadress, item.utdelningsadress ) || null
   let postcode = text( item.postcode, item.zipCode, item.postnummer ) || null
   let city = text( item.city, item.postPlace, item.ort, item.stad ) || null
@@ -82,6 +84,7 @@ function normaliseCompany ( item: Record<string, unknown> ) {
     name,
     orgnr,
     phone,
+    email,
     street,
     postcode,
     city,
@@ -122,6 +125,7 @@ export async function GET ( request: NextRequest ) {
         { name: { contains: search } },
         { orgnr: { contains: search } },
         { phone: { contains: search } },
+        { email: { contains: search } },
         { city: { contains: search } },
         { address: { contains: search } },
       ]
@@ -268,6 +272,7 @@ export async function POST ( request: NextRequest ) {
             data: {
               ...comp,
               phone: comp.phone || match.phone,
+              email: comp.email || match.email,
               street: comp.street || match.street,
               postcode: comp.postcode || match.postcode,
               city: comp.city || match.city,
