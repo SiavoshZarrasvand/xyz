@@ -59,23 +59,26 @@ model InCosmeticsExhibitor {
 }
 
 model AllaBolagCompany {
-  id          String    @id @default(uuid())
-  name        String
-  orgnr       String?
-  phone       String?
-  email       String?
-  street      String?
-  postcode    String?
-  city        String?
-  address     String?
-  url         String?   @unique
-  contacted   Boolean   @default(false)
-  contactedAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id            String    @id @default(uuid())
+  name          String
+  orgnr         String?
+  phone         String?
+  email         String?
+  website       String?
+  googleMapsUrl String?
+  street        String?
+  postcode      String?
+  city          String?
+  address       String?
+  url           String?   @unique
+  contacted     Boolean   @default(false)
+  contactedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   @@index([contacted])
   @@index([orgnr])
   @@index([city])
+  @@index([website])
 }
 

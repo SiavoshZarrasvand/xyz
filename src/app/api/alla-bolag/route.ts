@@ -79,12 +79,16 @@ function normaliseCompany ( item: Record<string, unknown> ) {
   }
 
   const url = text( item.url, item.link, item.profileUrl, item.allabolagUrl ) || null
+  const website = text( item.website, item.web, item.homepage, item.homePage ) || null
+  const googleMapsUrl = text( item.googleMapsUrl, item.mapsUrl, item.mapUrl ) || null
 
   return {
     name,
     orgnr,
     phone,
     email,
+    website,
+    googleMapsUrl,
     street,
     postcode,
     city,
@@ -107,10 +111,12 @@ export async function GET ( request: NextRequest ) {
     const search = searchParams.get( 'search' ) || ''
     const hasEmail = searchParams.get( 'hasEmail' )
     const hasPhone = searchParams.get( 'hasPhone' )
+    const hasWebsite = searchParams.get( 'hasWebsite' )
     const nameFilter = searchParams.get( 'name' )
     const orgnrFilter = searchParams.get( 'orgnr' )
     const phoneFilter = searchParams.get( 'phone' )
     const emailFilter = searchParams.get( 'email' )
+    const websiteFilter = searchParams.get( 'website' )
     const addressFilter = searchParams.get( 'address' )
 
     const skip = ( page - 1 ) * limit
@@ -139,10 +145,17 @@ export async function GET ( request: NextRequest ) {
       where.phone = null
     }
 
+    if ( hasWebsite === 'true' ) {
+      where.website = { not: null }
+    } else if ( hasWebsite === 'false' ) {
+      where.website = null
+    }
+
     if ( nameFilter ) where.name = { contains: nameFilter }
     if ( orgnrFilter ) where.orgnr = { contains: orgnrFilter }
     if ( phoneFilter ) where.phone = { contains: phoneFilter }
     if ( emailFilter ) where.email = { contains: emailFilter }
+    if ( websiteFilter ) where.website = { contains: websiteFilter }
     if ( addressFilter ) where.address = { contains: addressFilter }
 
     if ( search ) {
@@ -151,6 +164,7 @@ export async function GET ( request: NextRequest ) {
         { orgnr: { contains: search } },
         { phone: { contains: search } },
         { email: { contains: search } },
+        { website: { contains: search } },
         { city: { contains: search } },
         { address: { contains: search } },
       ]
@@ -298,6 +312,8 @@ export async function POST ( request: NextRequest ) {
               ...comp,
               phone: comp.phone || match.phone,
               email: comp.email || match.email,
+              website: comp.website || match.website,
+              googleMapsUrl: comp.googleMapsUrl || match.googleMapsUrl,
               street: comp.street || match.street,
               postcode: comp.postcode || match.postcode,
               city: comp.city || match.city,

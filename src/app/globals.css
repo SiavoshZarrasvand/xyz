@@ -20,6 +20,7 @@
   --color-border: var(--border);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --container-8xl: 96rem;
 }
 
 @media (prefers-color-scheme: dark) {

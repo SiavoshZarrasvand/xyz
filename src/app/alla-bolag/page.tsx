@@ -10,6 +10,8 @@ interface Company {
   orgnr: string | null
   phone: string | null
   email: string | null
+  website: string | null
+  googleMapsUrl: string | null
   street: string | null
   postcode: string | null
   city: string | null
@@ -95,6 +97,30 @@ function AllaBolagPageContent () {
       ),
     },
     {
+      id: 'website',
+      header: 'Website',
+      headerClassName: 'w-[180px]',
+      filter: { type: 'text', placeholder: 'Filter website...' },
+      cell: ( c ) => (
+        c.website ? (
+          <div className="flex items-center gap-1.5 text-xs">
+            <a
+              href={ c.website.startsWith( 'http' ) ? c.website : `https://${ c.website }` }
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline truncate block max-w-[140px]"
+              title={ c.website }
+            >
+              { c.website.replace( /^https?:\/\/(www\.)?/, '' ).replace( /\/$/, '' ) }
+            </a>
+            <span className="text-muted-foreground/60 text-[10px]">↗</span>
+          </div>
+        ) : (
+          <span className="text-muted-foreground text-xs">-</span>
+        )
+      ),
+    },
+    {
       id: 'email',
       header: 'E-post',
       headerClassName: 'w-[200px]',
@@ -157,15 +183,15 @@ function AllaBolagPageContent () {
       itemsKey="companies"
       sseEvents={ [ 'ALLABOLAG_UPDATED', 'ALLABOLAG_DELETED' ] }
       columns={ columns }
-      csvHeaders={ [ 'Name', 'Org.nr', 'Telefon', 'E-post', 'Address', 'Street', 'Postcode', 'City', 'URL', 'Contacted' ] }
-      csvRowMapper={ ( c ) => [ c.name, c.orgnr, c.phone, c.email, c.address, c.street, c.postcode, c.city, c.url, c.contacted ? 'Yes' : 'No' ] }
+      csvHeaders={ [ 'Name', 'Org.nr', 'Telefon', 'Website', 'E-post', 'Address', 'Street', 'Postcode', 'City', 'URL', 'Contacted' ] }
+      csvRowMapper={ ( c ) => [ c.name, c.orgnr, c.phone, c.website, c.email, c.address, c.street, c.postcode, c.city, c.url, c.contacted ? 'Yes' : 'No' ] }
       csvFilenamePrefix="alla-bolag-companies"
       primaryFilterConfig={ {
         paramName: 'city',
         responseKey: 'cities',
         allLabel: 'All Cities',
       } }
-      enabledQuickFilters={ { email: true, phone: true, pending: true } }
+      enabledQuickFilters={ { email: true, phone: true, website: true, pending: true } }
       emptyMessage="No companies match your filters. Run the Alla Bolag Extractor extension on allabolag.se or adjust filters."
     />
   )

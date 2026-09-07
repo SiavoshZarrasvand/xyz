@@ -283,7 +283,7 @@ export function DirectoryView<T extends { id: string; name?: string; contacted?:
     <div className="min-h-screen bg-background">
       {/* Universal Navigation Header */}
       <header className="border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-8 py-4 flex items-center justify-between">
+        <div className="max-w-8xl mx-auto px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <button
               onClick={ () => router.push( '/' ) }
@@ -334,7 +334,7 @@ export function DirectoryView<T extends { id: string; name?: string; contacted?:
       </header>
 
       {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-8 py-8">
+      <main className="max-w-8xl mx-auto px-8 py-8">
         <div className="space-y-6">
           {/* Header & Stats Banner */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
