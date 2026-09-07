@@ -105,6 +105,13 @@ export async function GET ( request: NextRequest ) {
     const contactedFilter = searchParams.get( 'contacted' )
     const cityFilter = searchParams.get( 'city' )
     const search = searchParams.get( 'search' ) || ''
+    const hasEmail = searchParams.get( 'hasEmail' )
+    const hasPhone = searchParams.get( 'hasPhone' )
+    const nameFilter = searchParams.get( 'name' )
+    const orgnrFilter = searchParams.get( 'orgnr' )
+    const phoneFilter = searchParams.get( 'phone' )
+    const emailFilter = searchParams.get( 'email' )
+    const addressFilter = searchParams.get( 'address' )
 
     const skip = ( page - 1 ) * limit
 
@@ -119,6 +126,24 @@ export async function GET ( request: NextRequest ) {
     if ( cityFilter && cityFilter !== 'all' ) {
       where.city = cityFilter
     }
+
+    if ( hasEmail === 'true' ) {
+      where.email = { not: null }
+    } else if ( hasEmail === 'false' ) {
+      where.email = null
+    }
+
+    if ( hasPhone === 'true' ) {
+      where.phone = { not: null }
+    } else if ( hasPhone === 'false' ) {
+      where.phone = null
+    }
+
+    if ( nameFilter ) where.name = { contains: nameFilter }
+    if ( orgnrFilter ) where.orgnr = { contains: orgnrFilter }
+    if ( phoneFilter ) where.phone = { contains: phoneFilter }
+    if ( emailFilter ) where.email = { contains: emailFilter }
+    if ( addressFilter ) where.address = { contains: addressFilter }
 
     if ( search ) {
       where.OR = [

@@ -56,6 +56,16 @@ export async function GET ( request: NextRequest ) {
     const contactedFilter = searchParams.get( 'contacted' )
     const countryFilter = searchParams.get( 'country' )
     const search = searchParams.get( 'search' ) || ''
+    const hasEmail = searchParams.get( 'hasEmail' )
+    const hasPhone = searchParams.get( 'hasPhone' )
+    const hasWebsite = searchParams.get( 'hasWebsite' )
+    const nameFilter = searchParams.get( 'name' )
+    const standFilter = searchParams.get( 'stand' )
+    const phoneFilter = searchParams.get( 'phone' )
+    const emailFilter = searchParams.get( 'email' )
+    const websiteFilter = searchParams.get( 'website' )
+    const cityFilter = searchParams.get( 'city' )
+    const descriptionFilter = searchParams.get( 'description' )
 
     const skip = ( page - 1 ) * limit
     const where: Prisma.InCosmeticsExhibitorWhereInput = {}
@@ -70,15 +80,59 @@ export async function GET ( request: NextRequest ) {
       where.country = countryFilter
     }
 
-    if ( search ) {
+    if ( hasEmail === 'true' ) {
+      where.email = { not: null }
+    } else if ( hasEmail === 'false' ) {
+      where.email = null
+    }
+
+    if ( hasPhone === 'true' ) {
+      where.phone = { not: null }
+    } else if ( hasPhone === 'false' ) {
+      where.phone = null
+    }
+
+    if ( hasWebsite === 'true' ) {
+      where.website = { not: null }
+    } else if ( hasWebsite === 'false' ) {
+      where.website = null
+    }
+
+    if ( nameFilter ) where.name = { contains: nameFilter }
+    if ( standFilter ) where.stand = { contains: standFilter }
+    if ( phoneFilter ) where.phone = { contains: phoneFilter }
+    if ( emailFilter ) where.email = { contains: emailFilter }
+    if ( websiteFilter ) where.website = { contains: websiteFilter }
+    if ( cityFilter ) where.city = { contains: cityFilter }
+    if ( descriptionFilter ) {
       where.OR = [
+        { description: { contains: descriptionFilter } },
+        { whyVisit: { contains: descriptionFilter } },
+      ]
+    }
+
+    if ( search ) {
+      const searchConditions = [
         { name: { contains: search } },
         { stand: { contains: search } },
+        { phone: { contains: search } },
+        { email: { contains: search } },
+        { website: { contains: search } },
         { country: { contains: search } },
         { city: { contains: search } },
+        { address: { contains: search } },
         { description: { contains: search } },
         { whyVisit: { contains: search } },
       ]
+      if ( where.OR ) {
+        where.AND = [
+          { OR: where.OR },
+          { OR: searchConditions },
+        ]
+        delete where.OR
+      } else {
+        where.OR = searchConditions
+      }
     }
 
     const [ exhibitors, total, countriesData, contactedCount ] = await Promise.all( [

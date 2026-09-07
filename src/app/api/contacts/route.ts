@@ -71,6 +71,15 @@ export async function GET ( request: NextRequest ) {
     const contactedFilter = searchParams.get( 'contacted' )
     const tagFilter = searchParams.get( 'tag' )
     const search = searchParams.get( 'search' ) || ''
+    const hasEmail = searchParams.get( 'hasEmail' )
+    const hasPhone = searchParams.get( 'hasPhone' )
+    const hasWebsite = searchParams.get( 'hasWebsite' )
+    const nameFilter = searchParams.get( 'name' )
+    const phoneFilter = searchParams.get( 'phone' )
+    const emailFilter = searchParams.get( 'email' )
+    const websiteFilter = searchParams.get( 'website' )
+    const addressFilter = searchParams.get( 'address' )
+    const categoryFilter = searchParams.get( 'category' )
 
     const skip = ( page - 1 ) * limit
 
@@ -89,10 +98,38 @@ export async function GET ( request: NextRequest ) {
       where.tag = tagFilter
     }
 
+    if ( hasEmail === 'true' ) {
+      where.email = { not: null }
+    } else if ( hasEmail === 'false' ) {
+      where.email = null
+    }
+
+    if ( hasPhone === 'true' ) {
+      where.phone = { not: null }
+    } else if ( hasPhone === 'false' ) {
+      where.phone = null
+    }
+
+    if ( hasWebsite === 'true' ) {
+      where.website = { not: null }
+    } else if ( hasWebsite === 'false' ) {
+      where.website = null
+    }
+
+    if ( nameFilter ) where.name = { contains: nameFilter }
+    if ( phoneFilter ) where.phone = { contains: phoneFilter }
+    if ( emailFilter ) where.email = { contains: emailFilter }
+    if ( websiteFilter ) where.website = { contains: websiteFilter }
+    if ( addressFilter ) where.address = { contains: addressFilter }
+    if ( categoryFilter ) where.category = { contains: categoryFilter }
+
     if ( search ) {
       where.OR = [
         { name: { contains: search } },
         { phone: { contains: search } },
+        { email: { contains: search } },
+        { website: { contains: search } },
+        { address: { contains: search } },
         { category: { contains: search } },
         { tag: { contains: search } },
       ]
