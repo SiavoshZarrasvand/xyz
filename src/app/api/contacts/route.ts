@@ -135,7 +135,7 @@ export async function GET ( request: NextRequest ) {
       ]
     }
 
-    const [ contacts, total, tagsData, untaggedCount ] = await Promise.all( [
+    const [ contacts, total, tagsData, untaggedCount, contactedCount ] = await Promise.all( [
       prisma.contact.findMany( {
         where,
         skip,
@@ -150,6 +150,7 @@ export async function GET ( request: NextRequest ) {
         orderBy: { _count: { id: 'desc' } },
       } ),
       prisma.contact.count( { where: { tag: null } } ),
+      prisma.contact.count( { where: { ...where, contacted: true } } ),
     ] )
 
     const tags = tagsData.map( t => ( { name: t.tag as string, count: t._count.id } ) )
@@ -159,6 +160,11 @@ export async function GET ( request: NextRequest ) {
         contacts,
         tags,
         untaggedCount,
+        stats: {
+          total,
+          contacted: contactedCount,
+          pending: total - contactedCount,
+        },
         pagination: {
           total,
           page,
