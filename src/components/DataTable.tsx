@@ -95,8 +95,11 @@ export function DataTable<T extends { id: string; contacted?: boolean }> ( {
 }: DataTableProps<T> ) {
   const [ showColumnFilters, setShowColumnFilters ] = useState( false )
 
-  // Calculate active filter count
-  const activeColumnFilterCount = Object.values( columnFilters ).filter( v => v && v.trim().length > 0 ).length
+  // Filter out empty strings and 'all' placeholders from column filters
+  const activeColumnFilterCount = Object.values( columnFilters ).filter(
+    v => v && v.trim().length > 0 && v !== 'all'
+  ).length
+
   const activeQuickFilterCount = [
     quickFilters?.hasEmail?.value !== null && quickFilters?.hasEmail?.value !== undefined,
     quickFilters?.hasPhone?.value !== null && quickFilters?.hasPhone?.value !== undefined,
@@ -104,8 +107,8 @@ export function DataTable<T extends { id: string; contacted?: boolean }> ( {
     quickFilters?.onlyPending?.value === true,
   ].filter( Boolean ).length
 
-  const isPrimaryActive = primaryFilter && primaryFilter.value !== 'all' && primaryFilter.value !== ''
-  const isSearchActive = Boolean( search && search.trim() )
+  const isPrimaryActive = Boolean( primaryFilter && primaryFilter.value !== 'all' && primaryFilter.value !== '' )
+  const isSearchActive = Boolean( search && search.trim().length > 0 )
 
   const totalActiveFilters = ( isSearchActive ? 1 : 0 ) +
     ( isPrimaryActive ? 1 : 0 ) +
@@ -147,10 +150,10 @@ export function DataTable<T extends { id: string; contacted?: boolean }> ( {
                 type="button"
                 onClick={ onExportCsv }
                 disabled={ data.length === 0 }
-                className="px-4 py-2 bg-muted/60 hover:bg-muted text-foreground border border-border rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                className="px-4 py-2 bg-muted/60 hover:bg-muted text-foreground border border-border rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
                 title="Export currently loaded records to CSV"
               >
-                <span>📥 Export CSV</span>
+                Export CSV
               </button>
             ) }
 
@@ -159,9 +162,9 @@ export function DataTable<T extends { id: string; contacted?: boolean }> ( {
                 type="button"
                 onClick={ onClearAll }
                 disabled={ isClearing || data.length === 0 }
-                className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
               >
-                <span>{ isClearing ? 'Clearing...' : clearAllLabel }</span>
+                { isClearing ? 'Clearing...' : clearAllLabel }
               </button>
             ) }
           </div>
@@ -169,20 +172,19 @@ export function DataTable<T extends { id: string; contacted?: boolean }> ( {
 
         {/* Quick Filter Pills Row */}
         <div className="flex flex-wrap items-center gap-2 pt-1">
-          <span className="text-xs text-muted-foreground font-medium mr-1">Quick Filters:</span>
+          <span className="text-xs text-muted-foreground font-medium mr-1">Filters:</span>
 
           { quickFilters?.hasEmail && (
             <button
               type="button"
               onClick={ () => quickFilters.hasEmail?.onChange( quickFilters.hasEmail.value === true ? null : true ) }
-              className={ `px-3 py-1 text-xs rounded-full border transition-colors flex items-center gap-1.5 ${
+              className={ `px-3 py-1 text-xs rounded-full border transition-colors ${
                 quickFilters.hasEmail.value === true
                   ? 'bg-primary text-primary-foreground border-primary font-medium'
                   : 'bg-background text-muted-foreground hover:text-foreground border-border hover:bg-muted/40'
               }` }
             >
-              <span>✉️ With Email</span>
-              { quickFilters.hasEmail.value === true && <span className="text-[10px]">✓</span> }
+              With Email
             </button>
           ) }
 
@@ -190,14 +192,13 @@ export function DataTable<T extends { id: string; contacted?: boolean }> ( {
             <button
               type="button"
               onClick={ () => quickFilters.hasPhone?.onChange( quickFilters.hasPhone.value === true ? null : true ) }
-              className={ `px-3 py-1 text-xs rounded-full border transition-colors flex items-center gap-1.5 ${
+              className={ `px-3 py-1 text-xs rounded-full border transition-colors ${
                 quickFilters.hasPhone.value === true
                   ? 'bg-primary text-primary-foreground border-primary font-medium'
                   : 'bg-background text-muted-foreground hover:text-foreground border-border hover:bg-muted/40'
               }` }
             >
-              <span>📞 With Phone</span>
-              { quickFilters.hasPhone.value === true && <span className="text-[10px]">✓</span> }
+              With Phone
             </button>
           ) }
 
@@ -205,14 +206,13 @@ export function DataTable<T extends { id: string; contacted?: boolean }> ( {
             <button
               type="button"
               onClick={ () => quickFilters.hasWebsite?.onChange( quickFilters.hasWebsite.value === true ? null : true ) }
-              className={ `px-3 py-1 text-xs rounded-full border transition-colors flex items-center gap-1.5 ${
+              className={ `px-3 py-1 text-xs rounded-full border transition-colors ${
                 quickFilters.hasWebsite.value === true
                   ? 'bg-primary text-primary-foreground border-primary font-medium'
                   : 'bg-background text-muted-foreground hover:text-foreground border-border hover:bg-muted/40'
               }` }
             >
-              <span>🌐 With Website</span>
-              { quickFilters.hasWebsite.value === true && <span className="text-[10px]">✓</span> }
+              With Website
             </button>
           ) }
 
@@ -220,14 +220,13 @@ export function DataTable<T extends { id: string; contacted?: boolean }> ( {
             <button
               type="button"
               onClick={ () => quickFilters.onlyPending?.onChange( !quickFilters.onlyPending.value ) }
-              className={ `px-3 py-1 text-xs rounded-full border transition-colors flex items-center gap-1.5 ${
+              className={ `px-3 py-1 text-xs rounded-full border transition-colors ${
                 quickFilters.onlyPending.value
                   ? 'bg-primary text-primary-foreground border-primary font-medium'
                   : 'bg-background text-muted-foreground hover:text-foreground border-border hover:bg-muted/40'
               }` }
             >
-              <span>⏳ Pending only</span>
-              { quickFilters.onlyPending.value && <span className="text-[10px]">✓</span> }
+              Pending Only
             </button>
           ) }
 
@@ -242,7 +241,7 @@ export function DataTable<T extends { id: string; contacted?: boolean }> ( {
                 : 'bg-background text-muted-foreground hover:text-foreground border-border hover:bg-muted/40'
             }` }
           >
-            <span>🔍 Column Filters</span>
+            <span>Column Filters</span>
             { activeColumnFilterCount > 0 && (
               <span className="px-1.5 py-0.2 bg-primary text-primary-foreground text-[10px] rounded-full font-bold">
                 { activeColumnFilterCount }
@@ -254,9 +253,9 @@ export function DataTable<T extends { id: string; contacted?: boolean }> ( {
             <button
               type="button"
               onClick={ onClearAllFilters }
-              className="px-2.5 py-1 text-xs text-red-500 hover:text-red-600 hover:bg-red-500/10 rounded-md transition-colors"
+              className="px-2.5 py-1 text-xs text-red-500 hover:text-red-600 hover:bg-red-500/10 rounded-md transition-colors font-medium"
             >
-              ✕ Clear filters ({ totalActiveFilters })
+              Clear Filters ({ totalActiveFilters })
             </button>
           ) }
         </div>
@@ -381,17 +380,10 @@ export function DataTable<T extends { id: string; contacted?: boolean }> ( {
                       <button
                         type="button"
                         onClick={ () => onDeleteItem( item.id, item ) }
-                        className="p-1.5 text-muted-foreground hover:text-red-600 transition-colors rounded hover:bg-red-50 dark:hover:bg-red-950/30"
+                        className="px-2 py-1 text-xs text-muted-foreground hover:text-red-600 transition-colors rounded hover:bg-red-50 dark:hover:bg-red-950/30"
                         title="Delete record"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={ 2 }
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                          />
-                        </svg>
+                        Delete
                       </button>
                     </td>
                   ) }

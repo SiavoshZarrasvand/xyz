@@ -80,7 +80,7 @@ function InCosmeticsPageContent () {
             { exhibitor.whyVisit && (
               <div className="mb-2 p-2 bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/70 dark:border-amber-900/40 rounded-md">
                 <span className="font-bold text-amber-800 dark:text-amber-300 block mb-0.5">
-                  ⭐ Why visit our stand:
+                  Why visit our stand:
                 </span>
                 <p className="line-clamp-3 text-slate-700 dark:text-slate-300">{ exhibitor.whyVisit }</p>
               </div>
@@ -122,7 +122,7 @@ function InCosmeticsPageContent () {
             href={ `tel:${ exhibitor.phone.replace( /\s/g, '' ) }` }
             className="text-xs font-medium text-foreground hover:text-primary hover:underline block truncate"
           >
-            📞 { exhibitor.phone }
+            { exhibitor.phone }
           </a>
         ) : (
           <span className="text-muted-foreground text-xs">-</span>
@@ -142,7 +142,7 @@ function InCosmeticsPageContent () {
             rel="noopener noreferrer"
             className="text-xs text-primary hover:underline truncate block"
           >
-            🌐 { exhibitor.website.replace( /^https?:\/\/(www\.)?/, '' ).replace( /\/$/, '' ) }
+            { exhibitor.website.replace( /^https?:\/\/(www\.)?/, '' ).replace( /\/$/, '' ) }
           </a>
         ) : (
           <span className="text-muted-foreground text-xs">-</span>
@@ -160,7 +160,7 @@ function InCosmeticsPageContent () {
             href={ `mailto:${ exhibitor.email }` }
             className="text-xs text-primary hover:underline truncate block"
           >
-            ✉️ { exhibitor.email }
+            { exhibitor.email }
           </a>
         ) : (
           <span className="text-muted-foreground text-xs">-</span>

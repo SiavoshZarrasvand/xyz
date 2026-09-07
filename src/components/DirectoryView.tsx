@@ -7,7 +7,6 @@ import { DataTable, ColumnDef } from '@/components/DataTable'
 export interface DirectoryViewProps<T extends { id: string; name?: string; contacted?: boolean }> {
   // Directory metadata
   title: string
-  emoji?: string
   subtitle: string
   activeNav: 'contacts' | 'in-cosmetics' | 'alla-bolag'
 
@@ -45,7 +44,6 @@ export interface DirectoryViewProps<T extends { id: string; name?: string; conta
 
 export function DirectoryView<T extends { id: string; name?: string; contacted?: boolean }> ( {
   title,
-  emoji,
   subtitle,
   activeNav,
   apiEndpoint,
@@ -102,7 +100,15 @@ export function DirectoryView<T extends { id: string; name?: string; contacted?:
     if ( primaryFilterConfig && columnId === primaryFilterConfig.paramName ) {
       setPrimaryFilterValue( value )
     } else {
-      setColumnFilters( prev => ( { ...prev, [ columnId ]: value } ) )
+      setColumnFilters( prev => {
+        const updated = { ...prev }
+        if ( !value || !value.trim() ) {
+          delete updated[ columnId ]
+        } else {
+          updated[ columnId ] = value
+        }
+        return updated
+      } )
     }
     setPage( 1 )
   }
@@ -125,7 +131,7 @@ export function DirectoryView<T extends { id: string; name?: string; contacted?:
       }
 
       for ( const [ k, v ] of Object.entries( columnFilters ) ) {
-        if ( v && v.trim() ) {
+        if ( v && v.trim() && v !== 'all' ) {
           params.set( k, v.trim() )
         }
       }
@@ -314,7 +320,7 @@ export function DirectoryView<T extends { id: string; name?: string; contacted?:
                     : 'text-muted-foreground hover:text-foreground'
                 }` }
               >
-                🇸🇪 Alla Bolag
+                Alla Bolag
               </button>
             </nav>
           </div>
@@ -334,7 +340,6 @@ export function DirectoryView<T extends { id: string; name?: string; contacted?:
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2.5">
-                { emoji && <span className="text-2xl">{ emoji }</span> }
                 <h1 className="text-2xl font-bold text-foreground">{ title }</h1>
                 <span className="px-2 py-0.5 text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-full">
                   Live Sync
@@ -412,10 +417,7 @@ export function DirectoryView<T extends { id: string; name?: string; contacted?:
                 },
               } : undefined,
             } }
-            columnFilters={ {
-              ...columnFilters,
-              ...( primaryFilterConfig ? { [ primaryFilterConfig.paramName ]: primaryFilterValue } : {} ),
-            } }
+            columnFilters={ columnFilters }
             onColumnFilterChange={ handleColumnFilterChange }
             onClearAllFilters={ handleClearFilters }
             onExportCsv={ handleExportCsv }

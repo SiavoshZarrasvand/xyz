@@ -62,21 +62,21 @@ function ContactsPageContent () {
       filter: { type: 'text', placeholder: 'Filter phone...' },
       cell: ( contact ) => (
         contact.phone ? (
-          <div className="flex items-center gap-1.5 text-xs">
+          <div className="flex items-center gap-2 text-xs">
             <a
               href={ `tel:${ contact.phone.replace( /\D/g, '' ) }` }
               className="font-medium text-foreground hover:text-primary hover:underline truncate"
             >
-              <span>📞 { contact.phone }</span>
+              { contact.phone }
             </a>
             <a
               href={ `https://wa.me/${ contact.phone.replace( /\D/g, '' ) }` }
               target="_blank"
               rel="noopener noreferrer"
               title="Open WhatsApp chat"
-              className="text-emerald-600 hover:opacity-80 shrink-0"
+              className="text-emerald-600 hover:underline text-[11px] shrink-0"
             >
-              💬
+              WhatsApp
             </a>
           </div>
         ) : (
@@ -96,7 +96,7 @@ function ContactsPageContent () {
             rel="noopener noreferrer"
             className="text-xs text-primary hover:underline truncate block max-w-[180px]"
           >
-            🌐 { contact.website.replace( /^https?:\/\/(www\.)?/, '' ).replace( /\/$/, '' ) }
+            { contact.website.replace( /^https?:\/\/(www\.)?/, '' ).replace( /\/$/, '' ) }
           </a>
         ) : (
           <span className="text-muted-foreground text-xs">-</span>
@@ -113,7 +113,7 @@ function ContactsPageContent () {
             href={ `mailto:${ contact.email }` }
             className="text-xs text-primary hover:underline truncate block max-w-[180px]"
           >
-            ✉️ { contact.email }
+            { contact.email }
           </a>
         ) : (
           <span className="text-muted-foreground text-xs">-</span>
@@ -138,7 +138,6 @@ function ContactsPageContent () {
       cell: ( contact ) => (
         contact.rating ? (
           <div className="flex items-center gap-1 text-xs">
-            <span className="text-amber-500 font-bold">★</span>
             <span className="font-semibold text-foreground">{ contact.rating.toFixed( 1 ) }</span>
             { contact.reviews !== null && (
               <span className="text-muted-foreground">({ contact.reviews })</span>

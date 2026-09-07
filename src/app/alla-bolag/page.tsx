@@ -79,15 +79,14 @@ function AllaBolagPageContent () {
               href={ `tel:${ c.phone.replace( /\s/g, '' ) }` }
               className="font-medium text-foreground hover:text-primary hover:underline truncate"
             >
-              <span>📞 { c.phone }</span>
+              { c.phone }
             </a>
             <button
               type="button"
               onClick={ () => copyToClipboard( c.phone!, `phone-${ c.id }` ) }
-              className="text-muted-foreground hover:text-foreground p-0.5 rounded hover:bg-muted transition-colors shrink-0"
-              title="Copy phone"
+              className="text-xs text-muted-foreground hover:text-foreground px-1 py-0.5 rounded hover:bg-muted transition-colors shrink-0"
             >
-              { copiedId === `phone-${ c.id }` ? '✓' : '📋' }
+              { copiedId === `phone-${ c.id }` ? 'Copied' : 'Copy' }
             </button>
           </div>
         ) : (
@@ -107,15 +106,14 @@ function AllaBolagPageContent () {
               href={ `mailto:${ c.email }` }
               className="font-medium text-foreground hover:text-primary hover:underline truncate"
             >
-              <span>✉️ { c.email }</span>
+              { c.email }
             </a>
             <button
               type="button"
               onClick={ () => copyToClipboard( c.email!, `email-${ c.id }` ) }
-              className="text-muted-foreground hover:text-foreground p-0.5 rounded hover:bg-muted transition-colors shrink-0"
-              title="Copy email"
+              className="text-xs text-muted-foreground hover:text-foreground px-1 py-0.5 rounded hover:bg-muted transition-colors shrink-0"
             >
-              { copiedId === `email-${ c.id }` ? '✓' : '📋' }
+              { copiedId === `email-${ c.id }` ? 'Copied' : 'Copy' }
             </button>
           </div>
         ) : (
@@ -153,7 +151,6 @@ function AllaBolagPageContent () {
   return (
     <DirectoryView<Company>
       title="Alla Bolag Directory"
-      emoji="🇸🇪"
       subtitle="Swedish enterprise records extracted from allabolag.se"
       activeNav="alla-bolag"
       apiEndpoint="/api/alla-bolag"
