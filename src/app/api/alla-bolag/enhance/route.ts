@@ -50,28 +50,53 @@ export async function POST ( request: NextRequest ) {
       if ( !website && !googleMapsUrl ) continue
 
       // Look up matching AllaBolagCompany
-      // 1. By exact name
-      let company = name
-        ? await prisma.allaBolagCompany.findFirst( {
-            where: {
-              name: { equals: name },
-            },
-          } )
-        : null
+      let company = null
 
-      // 2. By search tag if name didn't match directly
-      if ( !company && tag ) {
+      // 1. Exact primary key match (when called by enhancement script)
+      if ( item.companyId && typeof item.companyId === 'string' ) {
+        company = await prisma.allaBolagCompany.findUnique( {
+          where: { id: item.companyId },
+        } )
+      }
+
+      // 2. Exact company name match
+      if ( !company && name ) {
         company = await prisma.allaBolagCompany.findFirst( {
           where: {
-            OR: [
-              { name: { contains: tag } },
-              { name: { equals: tag } },
-            ],
+            name: { equals: name },
           },
         } )
       }
 
-      // 3. By phone number digits
+      // 3. Normalized company name match (stripping AB, Aktiebolag, etc.)
+      if ( !company && name ) {
+        const cleanName = name
+          .replace( /\b(ab|aktiebolag|hb|handelsbolag|kb|kommanditbolag)\b/gi, '' )
+          .replace( /[^\p{L}\p{N}\s]/gu, '' )
+          .trim()
+        if ( cleanName.length >= 3 ) {
+          company = await prisma.allaBolagCompany.findFirst( {
+            where: {
+              name: { contains: cleanName },
+            },
+          } )
+        }
+      }
+
+      // 4. By search tag: if tag was "Company Name AB City", match if company name starts with words in tag
+      if ( !company && tag ) {
+        const tagWords = tag.split( /\s+/ ).filter( Boolean )
+        if ( tagWords.length >= 2 ) {
+          const baseName = tagWords.slice( 0, 2 ).join( ' ' )
+          company = await prisma.allaBolagCompany.findFirst( {
+            where: {
+              name: { contains: baseName },
+            },
+          } )
+        }
+      }
+
+      // 5. By phone number digits
       if ( !company && phone && phone.length >= 7 ) {
         const last7 = phone.slice( -7 )
         company = await prisma.allaBolagCompany.findFirst( {
