@@ -3,6 +3,9 @@
 import { Suspense, useMemo } from 'react'
 import { DirectoryView } from '@/components/DirectoryView'
 import { ColumnDef } from '@/components/DataTable'
+import { PhoneCell } from '@/components/PhoneCell'
+import { EditableEmailCell } from '@/components/EditableEmailCell'
+import { EditableWebsiteCell } from '@/components/EditableWebsiteCell'
 
 interface Contact {
   id: string
@@ -61,27 +64,11 @@ function ContactsPageContent () {
       header: 'Phone',
       filter: { type: 'text', placeholder: 'Filter phone...' },
       cell: ( contact ) => (
-        contact.phone ? (
-          <div className="flex items-center gap-2 text-xs">
-            <a
-              href={ `tel:${ contact.phone.replace( /\D/g, '' ) }` }
-              className="font-medium text-foreground hover:text-primary hover:underline truncate"
-            >
-              { contact.phone }
-            </a>
-            <a
-              href={ `https://wa.me/${ contact.phone.replace( /\D/g, '' ) }` }
-              target="_blank"
-              rel="noopener noreferrer"
-              title="Open WhatsApp chat"
-              className="text-emerald-600 hover:underline text-[11px] shrink-0"
-            >
-              WhatsApp
-            </a>
-          </div>
-        ) : (
-          <span className="text-muted-foreground text-xs">-</span>
-        )
+        <PhoneCell
+          phone={ contact.phone }
+          id={ contact.id }
+          apiEndpoint="/api/contacts"
+        />
       ),
     },
     {
@@ -89,18 +76,11 @@ function ContactsPageContent () {
       header: 'Website',
       filter: { type: 'text', placeholder: 'Filter website...' },
       cell: ( contact ) => (
-        contact.website ? (
-          <a
-            href={ contact.website.startsWith( 'http' ) ? contact.website : `https://${ contact.website }` }
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-primary hover:underline truncate block max-w-[180px]"
-          >
-            { contact.website.replace( /^https?:\/\/(www\.)?/, '' ).replace( /\/$/, '' ) }
-          </a>
-        ) : (
-          <span className="text-muted-foreground text-xs">-</span>
-        )
+        <EditableWebsiteCell
+          id={ contact.id }
+          website={ contact.website }
+          apiEndpoint="/api/contacts"
+        />
       ),
     },
     {
@@ -108,16 +88,11 @@ function ContactsPageContent () {
       header: 'Email',
       filter: { type: 'text', placeholder: 'Filter email...' },
       cell: ( contact ) => (
-        contact.email ? (
-          <a
-            href={ `mailto:${ contact.email }` }
-            className="text-xs text-primary hover:underline truncate block max-w-[180px]"
-          >
-            { contact.email }
-          </a>
-        ) : (
-          <span className="text-muted-foreground text-xs">-</span>
-        )
+        <EditableEmailCell
+          id={ contact.id }
+          email={ contact.email }
+          apiEndpoint="/api/contacts"
+        />
       ),
     },
     {

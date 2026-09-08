@@ -135,7 +135,10 @@ export async function GET ( request: NextRequest ) {
       ]
     }
 
-    const [ contacts, total, tagsData, untaggedCount, contactedCount ] = await Promise.all( [
+    const baseWhere: Prisma.ContactWhereInput = { ...where }
+    delete baseWhere.contacted
+
+    const [ contacts, total, tagsData, untaggedCount, contactedCount, pendingCount ] = await Promise.all( [
       prisma.contact.findMany( {
         where,
         skip,
@@ -150,7 +153,8 @@ export async function GET ( request: NextRequest ) {
         orderBy: { _count: { id: 'desc' } },
       } ),
       prisma.contact.count( { where: { tag: null } } ),
-      prisma.contact.count( { where: { ...where, contacted: true } } ),
+      prisma.contact.count( { where: { ...baseWhere, contacted: true } } ),
+      prisma.contact.count( { where: { ...baseWhere, contacted: false } } ),
     ] )
 
     const tags = tagsData.map( t => ( { name: t.tag as string, count: t._count.id } ) )
@@ -163,7 +167,7 @@ export async function GET ( request: NextRequest ) {
         stats: {
           total,
           contacted: contactedCount,
-          pending: total - contactedCount,
+          pending: pendingCount,
         },
         pagination: {
           total,
@@ -328,21 +332,41 @@ export async function POST ( request: NextRequest ) {
 export async function PUT ( request: NextRequest ) {
   try {
     const body = await request.json()
-    const { id, contacted } = body
+    const { id } = body
 
-    if ( !id || typeof contacted !== 'boolean' ) {
+    if ( !id ) {
       return NextResponse.json(
-        { error: 'Invalid request body' },
+        { error: 'id is required' },
         { status: 400, headers: corsFor( request ) }
       )
     }
 
+    const data: Prisma.ContactUpdateInput = {}
+
+    if ( typeof body.contacted === 'boolean' ) {
+      data.contacted = body.contacted
+      data.contactedAt = body.contacted ? new Date() : null
+    }
+
+    if ( 'email' in body ) {
+      data.email = typeof body.email === 'string' && body.email.trim() ? body.email.trim() : null
+    }
+
+    if ( 'phone' in body ) {
+      data.phone = typeof body.phone === 'string' && body.phone.trim() ? body.phone.trim() : null
+    }
+
+    if ( 'website' in body ) {
+      data.website = typeof body.website === 'string' && body.website.trim() ? body.website.trim() : null
+    }
+
+    if ( 'googleMapsUrl' in body ) {
+      data.googleMapsUrl = typeof body.googleMapsUrl === 'string' && body.googleMapsUrl.trim() ? body.googleMapsUrl.trim() : null
+    }
+
     const contact = await prisma.contact.update( {
       where: { id },
-      data: {
-        contacted,
-        contactedAt: contacted ? new Date() : null,
-      },
+      data,
     } )
 
     broadcastCrmEvent( {

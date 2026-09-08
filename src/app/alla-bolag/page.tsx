@@ -3,6 +3,9 @@
 import { Suspense, useMemo, useState } from 'react'
 import { DirectoryView } from '@/components/DirectoryView'
 import { ColumnDef } from '@/components/DataTable'
+import { PhoneCell } from '@/components/PhoneCell'
+import { EditableEmailCell } from '@/components/EditableEmailCell'
+import { EditableWebsiteCell } from '@/components/EditableWebsiteCell'
 
 interface Company {
   id: string
@@ -75,25 +78,13 @@ function AllaBolagPageContent () {
       headerClassName: 'w-[180px]',
       filter: { type: 'text', placeholder: 'Filter telefon...' },
       cell: ( c ) => (
-        c.phone ? (
-          <div className="flex items-center gap-1.5 text-xs">
-            <a
-              href={ `tel:${ c.phone.replace( /\s/g, '' ) }` }
-              className="font-medium text-foreground hover:text-primary hover:underline truncate"
-            >
-              { c.phone }
-            </a>
-            <button
-              type="button"
-              onClick={ () => copyToClipboard( c.phone!, `phone-${ c.id }` ) }
-              className="text-xs text-muted-foreground hover:text-foreground px-1 py-0.5 rounded hover:bg-muted transition-colors shrink-0"
-            >
-              { copiedId === `phone-${ c.id }` ? 'Copied' : 'Copy' }
-            </button>
-          </div>
-        ) : (
-          <span className="text-muted-foreground text-xs">-</span>
-        )
+        <PhoneCell
+          phone={ c.phone }
+          id={ c.id }
+          apiEndpoint="/api/alla-bolag"
+          copiedId={ copiedId }
+          onCopy={ copyToClipboard }
+        />
       ),
     },
     {
@@ -102,19 +93,29 @@ function AllaBolagPageContent () {
       headerClassName: 'w-[180px]',
       filter: { type: 'text', placeholder: 'Filter website...' },
       cell: ( c ) => (
-        c.website ? (
-          <div className="flex items-center gap-1.5 text-xs">
-            <a
-              href={ c.website.startsWith( 'http' ) ? c.website : `https://${ c.website }` }
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:underline truncate block max-w-[140px]"
-              title={ c.website }
-            >
-              { c.website.replace( /^https?:\/\/(www\.)?/, '' ).replace( /\/$/, '' ) }
-            </a>
-            <span className="text-muted-foreground/60 text-[10px]">↗</span>
-          </div>
+        <EditableWebsiteCell
+          id={ c.id }
+          website={ c.website }
+          apiEndpoint="/api/alla-bolag"
+        />
+      ),
+    },
+    {
+      id: 'googleMapsUrl',
+      header: 'Maps',
+      headerClassName: 'w-[70px] text-center',
+      className: 'text-center',
+      cell: ( c ) => (
+        c.googleMapsUrl ? (
+          <a
+            href={ c.googleMapsUrl }
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline font-semibold inline-block p-1 text-sm"
+            title="Open listing on Google Maps"
+          >
+            ↗
+          </a>
         ) : (
           <span className="text-muted-foreground text-xs">-</span>
         )
@@ -126,25 +127,13 @@ function AllaBolagPageContent () {
       headerClassName: 'w-[200px]',
       filter: { type: 'text', placeholder: 'Filter e-post...' },
       cell: ( c ) => (
-        c.email ? (
-          <div className="flex items-center gap-1.5 text-xs">
-            <a
-              href={ `mailto:${ c.email }` }
-              className="font-medium text-foreground hover:text-primary hover:underline truncate"
-            >
-              { c.email }
-            </a>
-            <button
-              type="button"
-              onClick={ () => copyToClipboard( c.email!, `email-${ c.id }` ) }
-              className="text-xs text-muted-foreground hover:text-foreground px-1 py-0.5 rounded hover:bg-muted transition-colors shrink-0"
-            >
-              { copiedId === `email-${ c.id }` ? 'Copied' : 'Copy' }
-            </button>
-          </div>
-        ) : (
-          <span className="text-muted-foreground text-xs">-</span>
-        )
+        <EditableEmailCell
+          id={ c.id }
+          email={ c.email }
+          apiEndpoint="/api/alla-bolag"
+          copiedId={ copiedId }
+          onCopy={ copyToClipboard }
+        />
       ),
     },
     {
@@ -183,15 +172,15 @@ function AllaBolagPageContent () {
       itemsKey="companies"
       sseEvents={ [ 'ALLABOLAG_UPDATED', 'ALLABOLAG_DELETED' ] }
       columns={ columns }
-      csvHeaders={ [ 'Name', 'Org.nr', 'Telefon', 'Website', 'E-post', 'Address', 'Street', 'Postcode', 'City', 'URL', 'Contacted' ] }
-      csvRowMapper={ ( c ) => [ c.name, c.orgnr, c.phone, c.website, c.email, c.address, c.street, c.postcode, c.city, c.url, c.contacted ? 'Yes' : 'No' ] }
+      csvHeaders={ [ 'Name', 'Org.nr', 'Telefon', 'Website', 'Google Maps URL', 'E-post', 'Address', 'Street', 'Postcode', 'City', 'URL', 'Contacted' ] }
+      csvRowMapper={ ( c ) => [ c.name, c.orgnr, c.phone, c.website, c.googleMapsUrl, c.email, c.address, c.street, c.postcode, c.city, c.url, c.contacted ? 'Yes' : 'No' ] }
       csvFilenamePrefix="alla-bolag-companies"
       primaryFilterConfig={ {
         paramName: 'city',
         responseKey: 'cities',
         allLabel: 'All Cities',
       } }
-      enabledQuickFilters={ { email: true, phone: true, website: true, pending: true } }
+      enabledQuickFilters={ { email: true, phone: true, website: true, maps: true, pending: true } }
       emptyMessage="No companies match your filters. Run the Alla Bolag Extractor extension on allabolag.se or adjust filters."
     />
   )

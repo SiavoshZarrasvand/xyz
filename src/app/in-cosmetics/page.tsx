@@ -3,6 +3,9 @@
 import { Suspense, useMemo, useState } from 'react'
 import { DirectoryView } from '@/components/DirectoryView'
 import { ColumnDef } from '@/components/DataTable'
+import { PhoneCell } from '@/components/PhoneCell'
+import { EditableEmailCell } from '@/components/EditableEmailCell'
+import { EditableWebsiteCell } from '@/components/EditableWebsiteCell'
 
 interface Exhibitor {
   id: string
@@ -26,6 +29,13 @@ interface Exhibitor {
 
 function InCosmeticsPageContent () {
   const [ expandedDescriptions, setExpandedDescriptions ] = useState<Record<string, boolean>>( {} )
+  const [ copiedId, setCopiedId ] = useState<string | null>( null )
+
+  const copyToClipboard = ( text: string, id: string ) => {
+    navigator.clipboard.writeText( text )
+    setCopiedId( id )
+    setTimeout( () => setCopiedId( null ), 2000 )
+  }
 
   const columns: ColumnDef<Exhibitor>[] = useMemo( () => [
     {
@@ -117,16 +127,13 @@ function InCosmeticsPageContent () {
       headerClassName: 'w-[160px]',
       filter: { type: 'text', placeholder: 'Filter phone...' },
       cell: ( exhibitor ) => (
-        exhibitor.phone ? (
-          <a
-            href={ `tel:${ exhibitor.phone.replace( /\s/g, '' ) }` }
-            className="text-xs font-medium text-foreground hover:text-primary hover:underline block truncate"
-          >
-            { exhibitor.phone }
-          </a>
-        ) : (
-          <span className="text-muted-foreground text-xs">-</span>
-        )
+        <PhoneCell
+          phone={ exhibitor.phone }
+          id={ exhibitor.id }
+          apiEndpoint="/api/in-cosmetics"
+          copiedId={ copiedId }
+          onCopy={ copyToClipboard }
+        />
       ),
     },
     {
@@ -135,18 +142,11 @@ function InCosmeticsPageContent () {
       headerClassName: 'w-[160px]',
       filter: { type: 'text', placeholder: 'Filter website...' },
       cell: ( exhibitor ) => (
-        exhibitor.website ? (
-          <a
-            href={ exhibitor.website.startsWith( 'http' ) ? exhibitor.website : `https://${ exhibitor.website }` }
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-primary hover:underline truncate block"
-          >
-            { exhibitor.website.replace( /^https?:\/\/(www\.)?/, '' ).replace( /\/$/, '' ) }
-          </a>
-        ) : (
-          <span className="text-muted-foreground text-xs">-</span>
-        )
+        <EditableWebsiteCell
+          id={ exhibitor.id }
+          website={ exhibitor.website }
+          apiEndpoint="/api/in-cosmetics"
+        />
       ),
     },
     {
@@ -155,16 +155,13 @@ function InCosmeticsPageContent () {
       headerClassName: 'w-[170px]',
       filter: { type: 'text', placeholder: 'Filter email...' },
       cell: ( exhibitor ) => (
-        exhibitor.email ? (
-          <a
-            href={ `mailto:${ exhibitor.email }` }
-            className="text-xs text-primary hover:underline truncate block"
-          >
-            { exhibitor.email }
-          </a>
-        ) : (
-          <span className="text-muted-foreground text-xs">-</span>
-        )
+        <EditableEmailCell
+          id={ exhibitor.id }
+          email={ exhibitor.email }
+          apiEndpoint="/api/in-cosmetics"
+          copiedId={ copiedId }
+          onCopy={ copyToClipboard }
+        />
       ),
     },
     {
@@ -180,7 +177,7 @@ function InCosmeticsPageContent () {
         </div>
       ),
     },
-  ], [ expandedDescriptions ] )
+  ], [ expandedDescriptions, copiedId ] )
 
   return (
     <DirectoryView<Exhibitor>

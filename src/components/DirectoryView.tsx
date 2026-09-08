@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react'
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { DataTable, ColumnDef } from '@/components/DataTable'
+import { DataTable, ColumnDef, ContactedFilterStatus } from '@/components/DataTable'
 
 export interface DirectoryViewProps<T extends { id: string; name?: string; contacted?: boolean }> {
   // Directory metadata
@@ -25,7 +25,7 @@ export interface DirectoryViewProps<T extends { id: string; name?: string; conta
   primaryFilterConfig?: {
     paramName: string
     responseKey: string // 'cities' | 'tags' | 'countries'
-    allLabel: string
+    allLabel?: string
     placeholder?: string
     getOptionLabel?: ( item: { name: string; count: number } ) => string
   }
@@ -35,6 +35,7 @@ export interface DirectoryViewProps<T extends { id: string; name?: string; conta
     email?: boolean
     phone?: boolean
     website?: boolean
+    maps?: boolean
     pending?: boolean
   }
 
@@ -70,8 +71,12 @@ export function DirectoryView<T extends { id: string; name?: string; contacted?:
   const [ isClearing, setIsClearing ] = useState( false )
 
   const [ search, setSearch ] = useState( '' )
-  const [ onlyPending, setOnlyPending ] = useState<boolean>(
-    searchParams.get( 'pending' ) === 'true' || searchParams.get( 'contacted' ) === 'false'
+  const [ contactedFilter, setContactedFilter ] = useState<ContactedFilterStatus>(
+    searchParams.get( 'contacted' ) === 'true'
+      ? 'contacted'
+      : searchParams.get( 'pending' ) === 'true' || searchParams.get( 'contacted' ) === 'false'
+      ? 'pending'
+      : 'all'
   )
   const [ primaryFilterValue, setPrimaryFilterValue ] = useState<string>(
     primaryFilterConfig ? searchParams.get( primaryFilterConfig.paramName ) || 'all' : 'all'
@@ -80,6 +85,7 @@ export function DirectoryView<T extends { id: string; name?: string; contacted?:
   const [ hasEmail, setHasEmail ] = useState<boolean | null>( null )
   const [ hasPhone, setHasPhone ] = useState<boolean | null>( null )
   const [ hasWebsite, setHasWebsite ] = useState<boolean | null>( null )
+  const [ hasMaps, setHasMaps ] = useState<boolean | null>( null )
   const [ columnFilters, setColumnFilters ] = useState<Record<string, string>>( {} )
 
   const [ page, setPage ] = useState( 1 )
@@ -87,11 +93,12 @@ export function DirectoryView<T extends { id: string; name?: string; contacted?:
 
   const handleClearFilters = () => {
     setSearch( '' )
-    setOnlyPending( false )
+    setContactedFilter( 'all' )
     setPrimaryFilterValue( 'all' )
     setHasEmail( null )
     setHasPhone( null )
     setHasWebsite( null )
+    setHasMaps( null )
     setColumnFilters( {} )
     setPage( 1 )
   }
@@ -119,11 +126,13 @@ export function DirectoryView<T extends { id: string; name?: string; contacted?:
       const params = new URLSearchParams( {
         page: page.toString(),
         limit: '50',
-        ...( onlyPending ? { contacted: 'false' } : {} ),
+        ...( contactedFilter === 'contacted' ? { contacted: 'true' } : {} ),
+        ...( contactedFilter === 'pending' ? { contacted: 'false' } : {} ),
         ...( search ? { search } : {} ),
         ...( hasEmail !== null ? { hasEmail: String( hasEmail ) } : {} ),
         ...( hasPhone !== null ? { hasPhone: String( hasPhone ) } : {} ),
         ...( hasWebsite !== null ? { hasWebsite: String( hasWebsite ) } : {} ),
+        ...( hasMaps !== null ? { hasMaps: String( hasMaps ) } : {} ),
       } )
 
       if ( primaryFilterConfig && primaryFilterValue !== 'all' ) {
@@ -160,18 +169,23 @@ export function DirectoryView<T extends { id: string; name?: string; contacted?:
     apiEndpoint,
     itemsKey,
     page,
-    onlyPending,
+    contactedFilter,
     search,
     hasEmail,
     hasPhone,
     hasWebsite,
+    hasMaps,
     primaryFilterConfig,
     primaryFilterValue,
     columnFilters,
   ] )
 
+  const isInitialMountRef = useRef( true )
+
   useEffect( () => {
-    fetchItems( true )
+    const isInitial = isInitialMountRef.current
+    if ( isInitial ) isInitialMountRef.current = false
+    fetchItems( isInitial )
 
     let eventSource: EventSource | null = null
     if ( sseEvents.length > 0 ) {
@@ -387,6 +401,13 @@ export function DirectoryView<T extends { id: string; name?: string; contacted?:
               },
               options: primaryFilterOptionsFormatted,
             } : undefined }
+            contactedFilter={ enabledQuickFilters.pending !== false ? {
+              value: contactedFilter,
+              onChange: ( val ) => {
+                setContactedFilter( val )
+                setPage( 1 )
+              },
+            } : undefined }
             quickFilters={ {
               hasEmail: enabledQuickFilters.email ? {
                 value: hasEmail,
@@ -409,10 +430,10 @@ export function DirectoryView<T extends { id: string; name?: string; contacted?:
                   setPage( 1 )
                 },
               } : undefined,
-              onlyPending: enabledQuickFilters.pending ? {
-                value: onlyPending,
+              hasMaps: enabledQuickFilters.maps ? {
+                value: hasMaps,
                 onChange: ( val ) => {
-                  setOnlyPending( val )
+                  setHasMaps( val )
                   setPage( 1 )
                 },
               } : undefined,

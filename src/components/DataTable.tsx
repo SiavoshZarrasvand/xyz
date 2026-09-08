@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 
 export interface ColumnDef<T> {
   id: string
@@ -14,6 +14,8 @@ export interface ColumnDef<T> {
   }
   cell: ( item: T ) => React.ReactNode
 }
+
+export type ContactedFilterStatus = 'all' | 'contacted' | 'pending'
 
 export interface DataTableProps<T extends { id: string; contacted?: boolean }> {
   columns: ColumnDef<T>[]
@@ -38,11 +40,18 @@ export interface DataTableProps<T extends { id: string; contacted?: boolean }> {
     options: { label: string; value: string }[]
   }
 
+  // Contacted status segmented toggle: 'all' | 'contacted' | 'pending'
+  contactedFilter?: {
+    value: ContactedFilterStatus
+    onChange: ( status: ContactedFilterStatus ) => void
+  }
+
   // Quick presence filters
   quickFilters?: {
     hasEmail?: { value: boolean | null; onChange: ( v: boolean | null ) => void }
     hasPhone?: { value: boolean | null; onChange: ( v: boolean | null ) => void }
     hasWebsite?: { value: boolean | null; onChange: ( v: boolean | null ) => void }
+    hasMaps?: { value: boolean | null; onChange: ( v: boolean | null ) => void }
     onlyPending?: { value: boolean; onChange: ( v: boolean ) => void }
   }
 
@@ -67,6 +76,40 @@ export interface DataTableProps<T extends { id: string; contacted?: boolean }> {
   onPageChange: ( page: number | ( ( prev: number ) => number ) ) => void
 }
 
+function DebouncedInput ( {
+  value: initialValue,
+  onChange,
+  debounceMs = 250,
+  ...props
+}: {
+  value: string
+  onChange: ( value: string ) => void
+  debounceMs?: number
+} & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> ) {
+  const [ value, setValue ] = useState( initialValue )
+
+  useEffect( () => {
+    setValue( initialValue )
+  }, [ initialValue ] )
+
+  useEffect( () => {
+    const timer = setTimeout( () => {
+      if ( value !== initialValue ) {
+        onChange( value )
+      }
+    }, debounceMs )
+    return () => clearTimeout( timer )
+  }, [ value, debounceMs, initialValue, onChange ] )
+
+  return (
+    <input
+      { ...props }
+      value={ value }
+      onChange={ ( e ) => setValue( e.target.value ) }
+    />
+  )
+}
+
 export function DataTable<T extends { id: string; contacted?: boolean }> ( {
   columns,
   data,
@@ -79,6 +122,7 @@ export function DataTable<T extends { id: string; contacted?: boolean }> ( {
   onSearchChange,
   searchPlaceholder = 'Global search...',
   primaryFilter,
+  contactedFilter,
   quickFilters,
   columnFilters,
   onColumnFilterChange,
@@ -95,23 +139,21 @@ export function DataTable<T extends { id: string; contacted?: boolean }> ( {
 }: DataTableProps<T> ) {
   const [ showColumnFilters, setShowColumnFilters ] = useState( false )
 
-  // Filter out empty strings and 'all' placeholders from column filters
-  const activeColumnFilterCount = Object.values( columnFilters ).filter(
-    v => v && v.trim().length > 0 && v !== 'all'
-  ).length
-
   const activeQuickFilterCount = [
+    contactedFilter ? contactedFilter.value !== 'all' : quickFilters?.onlyPending?.value === true,
     quickFilters?.hasEmail?.value !== null && quickFilters?.hasEmail?.value !== undefined,
     quickFilters?.hasPhone?.value !== null && quickFilters?.hasPhone?.value !== undefined,
     quickFilters?.hasWebsite?.value !== null && quickFilters?.hasWebsite?.value !== undefined,
-    quickFilters?.onlyPending?.value === true,
+    quickFilters?.hasMaps?.value !== null && quickFilters?.hasMaps?.value !== undefined,
   ].filter( Boolean ).length
 
-  const isPrimaryActive = Boolean( primaryFilter && primaryFilter.value !== 'all' && primaryFilter.value !== '' )
-  const isSearchActive = Boolean( search && search.trim().length > 0 )
+  const activeColumnFilterCount = Object.values( columnFilters ).filter(
+    v => v && v.trim() && v !== 'all'
+  ).length
 
-  const totalActiveFilters = ( isSearchActive ? 1 : 0 ) +
-    ( isPrimaryActive ? 1 : 0 ) +
+  const totalActiveFilters =
+    ( search.trim() ? 1 : 0 ) +
+    ( primaryFilter && primaryFilter.value !== 'all' ? 1 : 0 ) +
     activeQuickFilterCount +
     activeColumnFilterCount
 
@@ -121,11 +163,11 @@ export function DataTable<T extends { id: string; contacted?: boolean }> ( {
       <div className="flex flex-col gap-3">
         <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
           <div className="flex flex-col sm:flex-row gap-3 flex-1 items-stretch sm:items-center">
-            <input
+            <DebouncedInput
               type="text"
               placeholder={ searchPlaceholder }
               value={ search }
-              onChange={ ( e ) => onSearchChange( e.target.value ) }
+              onChange={ onSearchChange }
               className="flex-1 px-4 py-2 bg-background border border-border rounded-lg outline-none focus:border-foreground/40 transition-colors text-sm"
             />
 
@@ -172,6 +214,44 @@ export function DataTable<T extends { id: string; contacted?: boolean }> ( {
 
         {/* Quick Filter Pills Row */}
         <div className="flex flex-wrap items-center gap-2 pt-1">
+          { contactedFilter && (
+            <div className="inline-flex rounded-lg border border-border p-0.5 bg-muted/40 text-xs shrink-0">
+              <button
+                type="button"
+                onClick={ () => contactedFilter.onChange( 'all' ) }
+                className={ `px-2.5 py-1 rounded-md transition-colors font-medium ${
+                  contactedFilter.value === 'all'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }` }
+              >
+                All
+              </button>
+              <button
+                type="button"
+                onClick={ () => contactedFilter.onChange( 'contacted' ) }
+                className={ `px-2.5 py-1 rounded-md transition-colors font-medium ${
+                  contactedFilter.value === 'contacted'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }` }
+              >
+                Contacted
+              </button>
+              <button
+                type="button"
+                onClick={ () => contactedFilter.onChange( 'pending' ) }
+                className={ `px-2.5 py-1 rounded-md transition-colors font-medium ${
+                  contactedFilter.value === 'pending'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }` }
+              >
+                Not Contacted
+              </button>
+            </div>
+          ) }
+
           <span className="text-xs text-muted-foreground font-medium mr-1">Filters:</span>
 
           { quickFilters?.hasEmail && (
@@ -216,7 +296,21 @@ export function DataTable<T extends { id: string; contacted?: boolean }> ( {
             </button>
           ) }
 
-          { quickFilters?.onlyPending && (
+          { quickFilters?.hasMaps && (
+            <button
+              type="button"
+              onClick={ () => quickFilters.hasMaps?.onChange( quickFilters.hasMaps.value === true ? null : true ) }
+              className={ `px-3 py-1 text-xs rounded-full border transition-colors ${
+                quickFilters.hasMaps.value === true
+                  ? 'bg-primary text-primary-foreground border-primary font-medium'
+                  : 'bg-background text-muted-foreground hover:text-foreground border-border hover:bg-muted/40'
+              }` }
+            >
+              With Maps
+            </button>
+          ) }
+
+          { !contactedFilter && quickFilters?.onlyPending && (
             <button
               type="button"
               onClick={ () => quickFilters.onlyPending?.onChange( !quickFilters.onlyPending.value ) }
@@ -262,137 +356,156 @@ export function DataTable<T extends { id: string; contacted?: boolean }> ( {
       </div>
 
       {/* Generated Table */}
-      { loading ? (
-        <div className="text-center py-12 text-muted-foreground">Loading records...</div>
-      ) : data.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground border border-dashed border-border rounded-lg">
-          { emptyMessage }
-        </div>
-      ) : (
-        <div className="overflow-x-auto border border-border rounded-lg">
-          <table className="w-full text-left">
-            <thead className="bg-muted/50">
-              <tr>
-                { columns.map( ( col ) => (
-                  <th
-                    key={ col.id }
-                    className={ `px-4 py-3 text-sm font-semibold text-foreground ${ col.headerClassName || '' }` }
-                  >
-                    { col.header }
-                  </th>
-                ) ) }
-                { onToggleContacted && (
-                  <th className="px-4 py-3 text-center text-sm font-semibold text-foreground w-[90px]">
-                    Contacted
-                  </th>
-                ) }
-                { onDeleteItem && (
-                  <th className="px-4 py-3 text-center text-sm font-semibold text-foreground w-[70px]">
-                    Actions
-                  </th>
-                ) }
-              </tr>
-
-              {/* Dynamic Column Filters Row */}
-              { showColumnFilters && (
-                <tr className="border-t border-border/60 bg-muted/20">
+      { ( () => {
+        const totalColCount = columns.length + ( onToggleContacted ? 1 : 0 ) + ( onDeleteItem ? 1 : 0 )
+        return (
+          <div className="overflow-x-auto border border-border rounded-lg">
+            <table className="w-full text-left">
+              <thead className="bg-muted/50">
+                <tr>
                   { columns.map( ( col ) => (
-                    <th key={ `filter-${ col.id }` } className="p-2 font-normal">
-                      { col.filter ? (
-                        col.filter.type === 'select' ? (
-                          <select
-                            value={ columnFilters[ col.id ] || 'all' }
-                            onChange={ ( e ) => onColumnFilterChange( col.id, e.target.value ) }
-                            className="w-full px-2 py-1 bg-background border border-border rounded outline-none focus:border-foreground/40 text-xs text-foreground truncate"
-                          >
-                            <option value="all">All</option>
-                            { col.filter.options?.map( ( opt ) => (
-                              <option key={ opt.value } value={ opt.value }>
-                                { opt.label }
-                              </option>
-                            ) ) }
-                          </select>
+                    <th
+                      key={ col.id }
+                      className={ `px-4 py-3 text-sm font-semibold text-foreground ${ col.headerClassName || '' }` }
+                    >
+                      { col.header }
+                    </th>
+                  ) ) }
+                  { onToggleContacted && (
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-foreground w-[90px]">
+                      Contacted
+                    </th>
+                  ) }
+                  { onDeleteItem && (
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-foreground w-[70px]">
+                      Actions
+                    </th>
+                  ) }
+                </tr>
+
+                {/* Dynamic Column Filters Row */}
+                { showColumnFilters && (
+                  <tr className="border-t border-border/60 bg-muted/20">
+                    { columns.map( ( col ) => (
+                      <th key={ `filter-${ col.id }` } className="p-2 font-normal">
+                        { col.filter ? (
+                          col.filter.type === 'select' ? (
+                            <select
+                              value={ columnFilters[ col.id ] || 'all' }
+                              onChange={ ( e ) => onColumnFilterChange( col.id, e.target.value ) }
+                              className="w-full px-2 py-1 bg-background border border-border rounded outline-none focus:border-foreground/40 text-xs text-foreground truncate"
+                            >
+                              <option value="all">All</option>
+                              { col.filter.options?.map( ( opt ) => (
+                                <option key={ opt.value } value={ opt.value }>
+                                  { opt.label }
+                                </option>
+                              ) ) }
+                            </select>
+                          ) : (
+                            <DebouncedInput
+                              type="text"
+                              placeholder={ col.filter.placeholder || `Filter ${ col.header.toLowerCase() }...` }
+                              value={ columnFilters[ col.id ] || '' }
+                              onChange={ ( val ) => onColumnFilterChange( col.id, val ) }
+                              className="w-full px-2 py-1 bg-background border border-border rounded outline-none focus:border-foreground/40 text-xs text-foreground placeholder:text-muted-foreground/60"
+                            />
+                          )
                         ) : (
-                          <input
-                            type="text"
-                            placeholder={ col.filter.placeholder || `Filter ${ col.header.toLowerCase() }...` }
-                            value={ columnFilters[ col.id ] || '' }
-                            onChange={ ( e ) => onColumnFilterChange( col.id, e.target.value ) }
-                            className="w-full px-2 py-1 bg-background border border-border rounded outline-none focus:border-foreground/40 text-xs text-foreground placeholder:text-muted-foreground/60"
-                          />
-                        )
-                      ) : (
-                        <div className="text-center text-muted-foreground text-xs">—</div>
-                      ) }
-                    </th>
-                  ) ) }
-                  { onToggleContacted && (
-                    <th className="p-2 font-normal text-center">
-                      <select
-                        value={ quickFilters?.onlyPending?.value ? 'pending' : 'all' }
-                        onChange={ ( e ) => quickFilters?.onlyPending?.onChange( e.target.value === 'pending' ) }
-                        className="w-full px-1.5 py-1 bg-background border border-border rounded outline-none focus:border-foreground/40 text-xs text-foreground"
-                      >
-                        <option value="all">All</option>
-                        <option value="pending">Pending</option>
-                      </select>
-                    </th>
-                  ) }
-                  { onDeleteItem && (
-                    <th className="p-2 text-center">
-                      { totalActiveFilters > 0 && (
-                        <button
-                          type="button"
-                          onClick={ onClearAllFilters }
-                          className="text-[11px] text-muted-foreground hover:text-foreground px-2 py-0.5 rounded hover:bg-muted transition-colors"
-                          title="Reset all filters"
+                          <div className="text-center text-muted-foreground text-xs">—</div>
+                        ) }
+                      </th>
+                    ) ) }
+                    { onToggleContacted && (
+                      <th className="p-2 font-normal text-center">
+                        <select
+                          value={ contactedFilter ? contactedFilter.value : quickFilters?.onlyPending?.value ? 'pending' : 'all' }
+                          onChange={ ( e ) => {
+                            const val = e.target.value as ContactedFilterStatus
+                            if ( contactedFilter ) {
+                              contactedFilter.onChange( val )
+                            } else {
+                              quickFilters?.onlyPending?.onChange( val === 'pending' )
+                            }
+                          } }
+                          className="w-full px-1.5 py-1 bg-background border border-border rounded outline-none focus:border-foreground/40 text-xs text-foreground"
                         >
-                          Reset
-                        </button>
+                          <option value="all">All</option>
+                          <option value="contacted">Contacted</option>
+                          <option value="pending">Not Contacted</option>
+                        </select>
+                      </th>
+                    ) }
+                    { onDeleteItem && (
+                      <th className="p-2 text-center">
+                        { totalActiveFilters > 0 && (
+                          <button
+                            type="button"
+                            onClick={ onClearAllFilters }
+                            className="text-[11px] text-muted-foreground hover:text-foreground px-2 py-0.5 rounded hover:bg-muted transition-colors"
+                            title="Reset all filters"
+                          >
+                            Reset
+                          </button>
+                        ) }
+                      </th>
+                    ) }
+                  </tr>
+                ) }
+              </thead>
+              <tbody className={ `divide-y divide-border ${ loading && data.length > 0 ? 'opacity-50 transition-opacity' : '' }` }>
+                { loading && data.length === 0 ? (
+                  <tr>
+                    <td colSpan={ totalColCount } className="text-center py-12 text-muted-foreground">
+                      Loading records...
+                    </td>
+                  </tr>
+                ) : data.length === 0 ? (
+                  <tr>
+                    <td colSpan={ totalColCount } className="text-center py-12 text-muted-foreground">
+                      { emptyMessage }
+                    </td>
+                  </tr>
+                ) : (
+                  data.map( ( item ) => (
+                    <tr key={ item.id } className="hover:bg-muted/30 transition-colors align-top">
+                      { columns.map( ( col ) => (
+                        <td key={ `${ item.id }-${ col.id }` } className={ `px-4 py-3 ${ col.className || '' }` }>
+                          { col.cell( item ) }
+                        </td>
+                      ) ) }
+
+                      { onToggleContacted && (
+                        <td className="px-4 py-3 text-center align-middle">
+                          <input
+                            type="checkbox"
+                            checked={ Boolean( item.contacted ) }
+                            onChange={ () => onToggleContacted( item.id, Boolean( item.contacted ) ) }
+                            className="w-5 h-5 cursor-pointer accent-primary"
+                          />
+                        </td>
                       ) }
-                    </th>
-                  ) }
-                </tr>
-              ) }
-            </thead>
-            <tbody className="divide-y divide-border">
-              { data.map( ( item ) => (
-                <tr key={ item.id } className="hover:bg-muted/30 transition-colors align-top">
-                  { columns.map( ( col ) => (
-                    <td key={ `${ item.id }-${ col.id }` } className={ `px-4 py-3 ${ col.className || '' }` }>
-                      { col.cell( item ) }
-                    </td>
-                  ) ) }
 
-                  { onToggleContacted && (
-                    <td className="px-4 py-3 text-center align-middle">
-                      <input
-                        type="checkbox"
-                        checked={ Boolean( item.contacted ) }
-                        onChange={ () => onToggleContacted( item.id, Boolean( item.contacted ) ) }
-                        className="w-5 h-5 cursor-pointer accent-primary"
-                      />
-                    </td>
-                  ) }
-
-                  { onDeleteItem && (
-                    <td className="px-4 py-3 text-center align-middle">
-                      <button
-                        type="button"
-                        onClick={ () => onDeleteItem( item.id, item ) }
-                        className="px-2 py-1 text-xs text-muted-foreground hover:text-red-600 transition-colors rounded hover:bg-red-50 dark:hover:bg-red-950/30"
-                        title="Delete record"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  ) }
-                </tr>
-              ) ) }
-            </tbody>
-          </table>
-        </div>
-      ) }
+                      { onDeleteItem && (
+                        <td className="px-4 py-3 text-center align-middle">
+                          <button
+                            type="button"
+                            onClick={ () => onDeleteItem( item.id, item ) }
+                            className="px-2 py-1 text-xs text-muted-foreground hover:text-red-600 transition-colors rounded hover:bg-red-50 dark:hover:bg-red-950/30"
+                            title="Delete record"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      ) }
+                    </tr>
+                  ) )
+                ) }
+              </tbody>
+            </table>
+          </div>
+        )
+      } )() }
 
       {/* Pagination */}
       { totalPages > 1 && (

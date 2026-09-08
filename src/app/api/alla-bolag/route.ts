@@ -112,11 +112,13 @@ export async function GET ( request: NextRequest ) {
     const hasEmail = searchParams.get( 'hasEmail' )
     const hasPhone = searchParams.get( 'hasPhone' )
     const hasWebsite = searchParams.get( 'hasWebsite' )
+    const hasMaps = searchParams.get( 'hasMaps' ) || searchParams.get( 'hasGoogleMaps' )
     const nameFilter = searchParams.get( 'name' )
     const orgnrFilter = searchParams.get( 'orgnr' )
     const phoneFilter = searchParams.get( 'phone' )
     const emailFilter = searchParams.get( 'email' )
     const websiteFilter = searchParams.get( 'website' )
+    const googleMapsUrlFilter = searchParams.get( 'googleMapsUrl' )
     const addressFilter = searchParams.get( 'address' )
 
     const skip = ( page - 1 ) * limit
@@ -151,11 +153,18 @@ export async function GET ( request: NextRequest ) {
       where.website = null
     }
 
+    if ( hasMaps === 'true' ) {
+      where.googleMapsUrl = { not: null }
+    } else if ( hasMaps === 'false' ) {
+      where.googleMapsUrl = null
+    }
+
     if ( nameFilter ) where.name = { contains: nameFilter }
     if ( orgnrFilter ) where.orgnr = { contains: orgnrFilter }
     if ( phoneFilter ) where.phone = { contains: phoneFilter }
     if ( emailFilter ) where.email = { contains: emailFilter }
     if ( websiteFilter ) where.website = { contains: websiteFilter }
+    if ( googleMapsUrlFilter ) where.googleMapsUrl = { contains: googleMapsUrlFilter }
     if ( addressFilter ) where.address = { contains: addressFilter }
 
     if ( search ) {
@@ -170,6 +179,9 @@ export async function GET ( request: NextRequest ) {
       ]
     }
 
+    const baseWhere: Prisma.AllaBolagCompanyWhereInput = { ...where }
+    delete baseWhere.contacted
+
     const [ companies, total, contactedCount, notContactedCount, citiesRaw ] = await Promise.all( [
       prisma.allaBolagCompany.findMany( {
         where,
@@ -178,8 +190,8 @@ export async function GET ( request: NextRequest ) {
         take: limit,
       } ),
       prisma.allaBolagCompany.count( { where } ),
-      prisma.allaBolagCompany.count( { where: { ...where, contacted: true } } ),
-      prisma.allaBolagCompany.count( { where: { ...where, contacted: false } } ),
+      prisma.allaBolagCompany.count( { where: { ...baseWhere, contacted: true } } ),
+      prisma.allaBolagCompany.count( { where: { ...baseWhere, contacted: false } } ),
       prisma.allaBolagCompany.groupBy( {
         by: [ 'city' ],
         _count: { city: true },
@@ -369,21 +381,42 @@ export async function POST ( request: NextRequest ) {
 
 export async function PUT ( request: NextRequest ) {
   try {
-    const { id, contacted } = await request.json()
+    const body = await request.json()
+    const { id } = body
 
-    if ( !id || typeof contacted !== 'boolean' ) {
+    if ( !id ) {
       return NextResponse.json(
-        { error: 'id and contacted status (boolean) are required' },
+        { error: 'id is required' },
         { status: 400, headers: corsFor( request ) }
       )
     }
 
+    const data: Prisma.AllaBolagCompanyUpdateInput = {}
+
+    if ( typeof body.contacted === 'boolean' ) {
+      data.contacted = body.contacted
+      data.contactedAt = body.contacted ? new Date() : null
+    }
+
+    if ( 'email' in body ) {
+      data.email = typeof body.email === 'string' && body.email.trim() ? body.email.trim() : null
+    }
+
+    if ( 'phone' in body ) {
+      data.phone = typeof body.phone === 'string' && body.phone.trim() ? body.phone.trim() : null
+    }
+
+    if ( 'website' in body ) {
+      data.website = typeof body.website === 'string' && body.website.trim() ? body.website.trim() : null
+    }
+
+    if ( 'googleMapsUrl' in body ) {
+      data.googleMapsUrl = typeof body.googleMapsUrl === 'string' && body.googleMapsUrl.trim() ? body.googleMapsUrl.trim() : null
+    }
+
     const updated = await prisma.allaBolagCompany.update( {
       where: { id },
-      data: {
-        contacted,
-        contactedAt: contacted ? new Date() : null,
-      },
+      data,
     } )
 
     broadcastCrmEvent( {
