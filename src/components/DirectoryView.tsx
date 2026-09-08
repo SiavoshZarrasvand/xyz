@@ -41,6 +41,7 @@ export interface DirectoryViewProps<T extends { id: string; name?: string; conta
 
   emptyMessage?: string
   clearAllConfirmMessage?: string
+  tableId?: string
 }
 
 export function DirectoryView<T extends { id: string; name?: string; contacted?: boolean }> ( {
@@ -58,6 +59,7 @@ export function DirectoryView<T extends { id: string; name?: string; contacted?:
   enabledQuickFilters = { email: true, phone: true, pending: true },
   emptyMessage,
   clearAllConfirmMessage,
+  tableId,
 }: DirectoryViewProps<T> ) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -380,6 +382,7 @@ export function DirectoryView<T extends { id: string; name?: string; contacted?:
 
           {/* Unified DataTable Component */}
           <DataTable<T>
+            tableId={ tableId || activeNav || itemsKey }
             columns={ columns }
             data={ items }
             loading={ loading }

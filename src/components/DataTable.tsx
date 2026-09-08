@@ -1,6 +1,14 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
+import {
+  useReactTable,
+  getCoreRowModel,
+  flexRender,
+  ColumnDef as TanStackColumnDef,
+  VisibilityState,
+  ColumnOrderState,
+} from '@tanstack/react-table'
 
 export interface ColumnDef<T> {
   id: string
@@ -18,6 +26,7 @@ export interface ColumnDef<T> {
 export type ContactedFilterStatus = 'all' | 'contacted' | 'pending'
 
 export interface DataTableProps<T extends { id: string; contacted?: boolean }> {
+  tableId?: string
   columns: ColumnDef<T>[]
   data: T[]
   loading: boolean
@@ -111,6 +120,7 @@ function DebouncedInput ( {
 }
 
 export function DataTable<T extends { id: string; contacted?: boolean }> ( {
+  tableId = 'default',
   columns,
   data,
   loading,
@@ -138,62 +148,284 @@ export function DataTable<T extends { id: string; contacted?: boolean }> ( {
   onPageChange,
 }: DataTableProps<T> ) {
   const [ showColumnFilters, setShowColumnFilters ] = useState( false )
+  const [ showColumnMenu, setShowColumnMenu ] = useState( false )
+  const columnMenuRef = useRef<HTMLDivElement>( null )
 
-  const activeQuickFilterCount = [
-    contactedFilter ? contactedFilter.value !== 'all' : quickFilters?.onlyPending?.value === true,
-    quickFilters?.hasEmail?.value !== null && quickFilters?.hasEmail?.value !== undefined,
-    quickFilters?.hasPhone?.value !== null && quickFilters?.hasPhone?.value !== undefined,
-    quickFilters?.hasWebsite?.value !== null && quickFilters?.hasWebsite?.value !== undefined,
-    quickFilters?.hasMaps?.value !== null && quickFilters?.hasMaps?.value !== undefined,
-  ].filter( Boolean ).length
+  // Drag-and-drop column reordering state
+  const [ draggedColId, setDraggedColId ] = useState<string | null>( null )
+  const [ dragOverColId, setDragOverColId ] = useState<string | null>( null )
 
-  const activeColumnFilterCount = Object.values( columnFilters ).filter(
-    v => v && v.trim() && v !== 'all'
-  ).length
+  // Close column menu on outside click
+  useEffect( () => {
+    const handleOutsideClick = ( e: MouseEvent ) => {
+      if ( columnMenuRef.current && !columnMenuRef.current.contains( e.target as Node ) ) {
+        setShowColumnMenu( false )
+      }
+    }
+    if ( showColumnMenu ) {
+      document.addEventListener( 'mousedown', handleOutsideClick )
+      return () => document.removeEventListener( 'mousedown', handleOutsideClick )
+    }
+  }, [ showColumnMenu ] )
 
-  const totalActiveFilters =
-    ( search.trim() ? 1 : 0 ) +
-    ( primaryFilter && primaryFilter.value !== 'all' ? 1 : 0 ) +
-    activeQuickFilterCount +
-    activeColumnFilterCount
+  // Build TanStack column definitions
+  const tanstackColumns = useMemo<TanStackColumnDef<T, unknown>[]>( () => {
+    const cols: TanStackColumnDef<T, unknown>[] = columns.map( ( col ) => ( {
+      id: col.id,
+      header: col.header,
+      cell: ( info ) => col.cell( info.row.original ),
+      meta: {
+        filter: col.filter,
+        className: col.className,
+        headerClassName: col.headerClassName,
+        label: col.header,
+      },
+      enableHiding: true,
+    } ) )
+
+    if ( onToggleContacted ) {
+      cols.push( {
+        id: 'contacted',
+        header: 'Contacted',
+        cell: ( info ) => (
+          <input
+            type="checkbox"
+            checked={ info.row.original.contacted || false }
+            onChange={ () => onToggleContacted( info.row.original.id, info.row.original.contacted || false ) }
+            className="w-4 h-4 rounded text-primary focus:ring-0 cursor-pointer accent-primary"
+            title="Toggle contacted status"
+          />
+        ),
+        meta: {
+          className: 'text-center',
+          headerClassName: 'text-center w-[90px]',
+          label: 'Contacted',
+        },
+        enableHiding: true,
+      } )
+    }
+
+    if ( onDeleteItem ) {
+      cols.push( {
+        id: 'actions',
+        header: 'Actions',
+        cell: ( info ) => (
+          <button
+            type="button"
+            onClick={ () => onDeleteItem( info.row.original.id, info.row.original ) }
+            className="text-xs text-red-500 hover:text-red-700 p-1 hover:bg-red-500/10 rounded transition-colors"
+            title="Delete record"
+          >
+            Delete
+          </button>
+        ),
+        meta: {
+          className: 'text-center',
+          headerClassName: 'text-center w-[70px]',
+          label: 'Actions',
+        },
+        enableHiding: false,
+      } )
+    }
+
+    return cols
+  }, [ columns, onToggleContacted, onDeleteItem ] )
+
+  const initialColumnOrder = useMemo(
+    () => tanstackColumns.map( ( c ) => c.id! ),
+    [ tanstackColumns ]
+  )
+
+  const [ columnVisibility, setColumnVisibility ] = useState<VisibilityState>( {} )
+  const [ columnOrder, setColumnOrder ] = useState<ColumnOrderState>( initialColumnOrder )
+
+  // Load persisted layout (visibility + order) from localStorage on mount
+  useEffect( () => {
+    if ( typeof window === 'undefined' ) return
+    try {
+      const storageKey = `xyz_table_layout_${ tableId }`
+      const saved = localStorage.getItem( storageKey )
+      if ( saved ) {
+        const parsed = JSON.parse( saved )
+        if ( parsed.visibility && typeof parsed.visibility === 'object' ) {
+          setColumnVisibility( parsed.visibility )
+        }
+        if ( Array.isArray( parsed.order ) && parsed.order.length > 0 ) {
+          // Verify saved order contains known columns and append any new columns
+          const knownSet = new Set( initialColumnOrder )
+          const validOrder = parsed.order.filter( ( id: string ) => knownSet.has( id ) )
+          initialColumnOrder.forEach( ( id ) => {
+            if ( !validOrder.includes( id ) ) validOrder.push( id )
+          } )
+          setColumnOrder( validOrder )
+        }
+      } else {
+        setColumnOrder( initialColumnOrder )
+      }
+    } catch ( err ) {
+      console.warn( 'Failed to load table layout:', err )
+    }
+  }, [ tableId, initialColumnOrder ] )
+
+  // Persist layout changes to localStorage
+  const saveLayoutToStorage = ( newVisibility: VisibilityState, newOrder: ColumnOrderState ) => {
+    if ( typeof window === 'undefined' ) return
+    try {
+      const storageKey = `xyz_table_layout_${ tableId }`
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify( {
+          visibility: newVisibility,
+          order: newOrder,
+        } )
+      )
+    } catch ( err ) {
+      console.warn( 'Failed to save table layout:', err )
+    }
+  }
+
+  const handleVisibilityChange = ( updaterOrValue: VisibilityState | ( ( prev: VisibilityState ) => VisibilityState ) ) => {
+    setColumnVisibility( ( prev ) => {
+      const next = typeof updaterOrValue === 'function' ? updaterOrValue( prev ) : updaterOrValue
+      saveLayoutToStorage( next, columnOrder )
+      return next
+    } )
+  }
+
+  const handleOrderChange = ( updaterOrValue: ColumnOrderState | ( ( prev: ColumnOrderState ) => ColumnOrderState ) ) => {
+    setColumnOrder( ( prev ) => {
+      const next = typeof updaterOrValue === 'function' ? updaterOrValue( prev ) : updaterOrValue
+      saveLayoutToStorage( columnVisibility, next )
+      return next
+    } )
+  }
+
+  // Reset columns visibility and order to default
+  const handleResetLayout = () => {
+    if ( typeof window !== 'undefined' ) {
+      localStorage.removeItem( `xyz_table_layout_${ tableId }` )
+    }
+    setColumnVisibility( {} )
+    setColumnOrder( initialColumnOrder )
+  }
+
+  // Reorder helper to swap or shift columns
+  const reorderColumns = ( sourceColId: string, targetColId: string ) => {
+    if ( sourceColId === targetColId ) return
+    const currentOrder = table.getAllLeafColumns().map( ( c ) => c.id )
+    const fromIdx = currentOrder.indexOf( sourceColId )
+    const toIdx = currentOrder.indexOf( targetColId )
+    if ( fromIdx === -1 || toIdx === -1 ) return
+
+    const newOrder = [ ...currentOrder ]
+    newOrder.splice( fromIdx, 1 )
+    newOrder.splice( toIdx, 0, sourceColId )
+    handleOrderChange( newOrder )
+  }
+
+  const moveColumn = ( colId: string, direction: 'up' | 'down' ) => {
+    const currentOrder = table.getAllLeafColumns().map( ( c ) => c.id )
+    const idx = currentOrder.indexOf( colId )
+    if ( idx === -1 ) return
+
+    const targetIdx = direction === 'up' ? idx - 1 : idx + 1
+    if ( targetIdx < 0 || targetIdx >= currentOrder.length ) return
+
+    const newOrder = [ ...currentOrder ]
+    const [ moved ] = newOrder.splice( idx, 1 )
+    newOrder.splice( targetIdx, 0, moved )
+    handleOrderChange( newOrder )
+  }
+
+  // Initialise TanStack table instance
+  const table = useReactTable( {
+    data,
+    columns: tanstackColumns,
+    state: {
+      columnVisibility,
+      columnOrder,
+    },
+    onColumnVisibilityChange: handleVisibilityChange,
+    onColumnOrderChange: handleOrderChange,
+    getCoreRowModel: getCoreRowModel(),
+  } )
+
+  // Filter stats calculations
+  const activeColumnFilterCount = Object.keys( columnFilters ).length
+  const hasQuickFilter = (
+    ( contactedFilter && contactedFilter.value !== 'all' ) ||
+    ( !contactedFilter && quickFilters?.onlyPending?.value ) ||
+    quickFilters?.hasEmail?.value !== null ||
+    quickFilters?.hasPhone?.value !== null ||
+    quickFilters?.hasWebsite?.value !== null ||
+    quickFilters?.hasMaps?.value !== null ||
+    ( primaryFilter && primaryFilter.value !== 'all' )
+  )
+
+  const totalActiveFilters = activeColumnFilterCount + ( hasQuickFilter ? 1 : 0 )
+  const visibleLeafColumns = table.getVisibleLeafColumns()
+  const allLeafColumns = table.getAllLeafColumns()
 
   return (
     <div className="space-y-4">
-      {/* Top Filter & Actions Toolbar */}
+      {/* Control Toolbar */}
       <div className="flex flex-col gap-3">
-        <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
-          <div className="flex flex-col sm:flex-row gap-3 flex-1 items-stretch sm:items-center">
-            <DebouncedInput
-              type="text"
-              placeholder={ searchPlaceholder }
-              value={ search }
-              onChange={ onSearchChange }
-              className="flex-1 px-4 py-2 bg-background border border-border rounded-lg outline-none focus:border-foreground/40 transition-colors text-sm"
-            />
-
+        {/* Main Actions Row */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3 flex-1 min-w-[300px]">
+            {/* Primary Filter Dropdown (e.g. City / Tag / Country) */}
             { primaryFilter && (
-              <select
-                value={ primaryFilter.value }
-                onChange={ ( e ) => primaryFilter.onChange( e.target.value ) }
-                className="px-3 py-2 bg-background border border-border rounded-lg outline-none focus:border-foreground/40 transition-colors text-sm max-w-[220px] truncate"
-              >
-                { primaryFilter.options.map( ( opt ) => (
-                  <option key={ opt.value } value={ opt.value }>
-                    { opt.label }
-                  </option>
-                ) ) }
-              </select>
+              <div className="w-[180px]">
+                <select
+                  value={ primaryFilter.value }
+                  onChange={ ( e ) => primaryFilter.onChange( e.target.value ) }
+                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm font-medium text-foreground outline-none focus:border-foreground/40 transition-colors"
+                >
+                  { primaryFilter.options.map( ( opt ) => (
+                    <option key={ opt.value } value={ opt.value }>
+                      { opt.label }
+                    </option>
+                  ) ) }
+                </select>
+              </div>
             ) }
+
+            {/* Global Search Input with instant debounce */}
+            <div className="relative flex-1 min-w-[200px] max-w-[360px]">
+              <DebouncedInput
+                type="text"
+                placeholder={ searchPlaceholder }
+                value={ search }
+                onChange={ onSearchChange }
+                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground outline-none focus:border-foreground/40 transition-colors placeholder:text-muted-foreground"
+              />
+            </div>
+
+            {/* Live Stats Badges */}
+            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 px-3 py-2 rounded-lg border border-border">
+              <span>Total: <strong className="text-foreground">{ total.toLocaleString() }</strong></span>
+              { contactedCount !== undefined && (
+                <>
+                  <span>•</span>
+                  <span>Contacted: <strong className="text-emerald-600 dark:text-emerald-400">{ contactedCount.toLocaleString() }</strong></span>
+                </>
+              ) }
+              { pendingCount !== undefined && (
+                <>
+                  <span>•</span>
+                  <span>Pending: <strong className="text-amber-600 dark:text-amber-400">{ pendingCount.toLocaleString() }</strong></span>
+                </>
+              ) }
+            </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2">
             { onExportCsv && (
               <button
                 type="button"
                 onClick={ onExportCsv }
                 disabled={ data.length === 0 }
-                className="px-4 py-2 bg-muted/60 hover:bg-muted text-foreground border border-border rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
-                title="Export currently loaded records to CSV"
+                className="px-4 py-2 bg-background hover:bg-muted text-foreground border border-border rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
               >
                 Export CSV
               </button>
@@ -212,327 +444,481 @@ export function DataTable<T extends { id: string; contacted?: boolean }> ( {
           </div>
         </div>
 
-        {/* Quick Filter Pills Row */}
-        <div className="flex flex-wrap items-center gap-2 pt-1">
-          { contactedFilter && (
-            <div className="inline-flex rounded-lg border border-border p-0.5 bg-muted/40 text-xs shrink-0">
-              <button
-                type="button"
-                onClick={ () => contactedFilter.onChange( 'all' ) }
-                className={ `px-2.5 py-1 rounded-md transition-colors font-medium ${
-                  contactedFilter.value === 'all'
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }` }
-              >
-                All
-              </button>
-              <button
-                type="button"
-                onClick={ () => contactedFilter.onChange( 'contacted' ) }
-                className={ `px-2.5 py-1 rounded-md transition-colors font-medium ${
-                  contactedFilter.value === 'contacted'
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }` }
-              >
-                Contacted
-              </button>
-              <button
-                type="button"
-                onClick={ () => contactedFilter.onChange( 'pending' ) }
-                className={ `px-2.5 py-1 rounded-md transition-colors font-medium ${
-                  contactedFilter.value === 'pending'
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }` }
-              >
-                Not Contacted
-              </button>
-            </div>
-          ) }
-
-          <span className="text-xs text-muted-foreground font-medium mr-1">Filters:</span>
-
-          { quickFilters?.hasEmail && (
-            <button
-              type="button"
-              onClick={ () => quickFilters.hasEmail?.onChange( quickFilters.hasEmail.value === true ? null : true ) }
-              className={ `px-3 py-1 text-xs rounded-full border transition-colors ${
-                quickFilters.hasEmail.value === true
-                  ? 'bg-primary text-primary-foreground border-primary font-medium'
-                  : 'bg-background text-muted-foreground hover:text-foreground border-border hover:bg-muted/40'
-              }` }
-            >
-              With Email
-            </button>
-          ) }
-
-          { quickFilters?.hasPhone && (
-            <button
-              type="button"
-              onClick={ () => quickFilters.hasPhone?.onChange( quickFilters.hasPhone.value === true ? null : true ) }
-              className={ `px-3 py-1 text-xs rounded-full border transition-colors ${
-                quickFilters.hasPhone.value === true
-                  ? 'bg-primary text-primary-foreground border-primary font-medium'
-                  : 'bg-background text-muted-foreground hover:text-foreground border-border hover:bg-muted/40'
-              }` }
-            >
-              With Phone
-            </button>
-          ) }
-
-          { quickFilters?.hasWebsite && (
-            <button
-              type="button"
-              onClick={ () => quickFilters.hasWebsite?.onChange( quickFilters.hasWebsite.value === true ? null : true ) }
-              className={ `px-3 py-1 text-xs rounded-full border transition-colors ${
-                quickFilters.hasWebsite.value === true
-                  ? 'bg-primary text-primary-foreground border-primary font-medium'
-                  : 'bg-background text-muted-foreground hover:text-foreground border-border hover:bg-muted/40'
-              }` }
-            >
-              With Website
-            </button>
-          ) }
-
-          { quickFilters?.hasMaps && (
-            <button
-              type="button"
-              onClick={ () => quickFilters.hasMaps?.onChange( quickFilters.hasMaps.value === true ? null : true ) }
-              className={ `px-3 py-1 text-xs rounded-full border transition-colors ${
-                quickFilters.hasMaps.value === true
-                  ? 'bg-primary text-primary-foreground border-primary font-medium'
-                  : 'bg-background text-muted-foreground hover:text-foreground border-border hover:bg-muted/40'
-              }` }
-            >
-              With Maps
-            </button>
-          ) }
-
-          { !contactedFilter && quickFilters?.onlyPending && (
-            <button
-              type="button"
-              onClick={ () => quickFilters.onlyPending?.onChange( !quickFilters.onlyPending.value ) }
-              className={ `px-3 py-1 text-xs rounded-full border transition-colors ${
-                quickFilters.onlyPending.value
-                  ? 'bg-primary text-primary-foreground border-primary font-medium'
-                  : 'bg-background text-muted-foreground hover:text-foreground border-border hover:bg-muted/40'
-              }` }
-            >
-              Pending Only
-            </button>
-          ) }
-
-          <div className="h-4 w-px bg-border mx-1" />
-
-          <button
-            type="button"
-            onClick={ () => setShowColumnFilters( prev => !prev ) }
-            className={ `px-3 py-1 text-xs rounded-lg border transition-colors flex items-center gap-1.5 ${
-              showColumnFilters || activeColumnFilterCount > 0
-                ? 'bg-muted text-foreground border-foreground/30 font-medium'
-                : 'bg-background text-muted-foreground hover:text-foreground border-border hover:bg-muted/40'
-            }` }
-          >
-            <span>Column Filters</span>
-            { activeColumnFilterCount > 0 && (
-              <span className="px-1.5 py-0.2 bg-primary text-primary-foreground text-[10px] rounded-full font-bold">
-                { activeColumnFilterCount }
-              </span>
+        {/* Quick Filter Pills and Column Controls */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+          <div className="flex flex-wrap items-center gap-2">
+            { contactedFilter && (
+              <div className="inline-flex rounded-lg border border-border p-0.5 bg-muted/40 text-xs shrink-0">
+                <button
+                  type="button"
+                  onClick={ () => contactedFilter.onChange( 'all' ) }
+                  className={ `px-2.5 py-1 rounded-md transition-colors font-medium ${
+                    contactedFilter.value === 'all'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }` }
+                >
+                  All
+                </button>
+                <button
+                  type="button"
+                  onClick={ () => contactedFilter.onChange( 'contacted' ) }
+                  className={ `px-2.5 py-1 rounded-md transition-colors font-medium ${
+                    contactedFilter.value === 'contacted'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }` }
+                >
+                  Contacted
+                </button>
+                <button
+                  type="button"
+                  onClick={ () => contactedFilter.onChange( 'pending' ) }
+                  className={ `px-2.5 py-1 rounded-md transition-colors font-medium ${
+                    contactedFilter.value === 'pending'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }` }
+                >
+                  Not Contacted
+                </button>
+              </div>
             ) }
-          </button>
 
-          { totalActiveFilters > 0 && (
+            <span className="text-xs text-muted-foreground font-medium mr-1">Filters:</span>
+
+            { quickFilters?.hasEmail && (
+              <button
+                type="button"
+                onClick={ () => quickFilters.hasEmail?.onChange( quickFilters.hasEmail.value === true ? null : true ) }
+                className={ `px-3 py-1 text-xs rounded-full border transition-colors ${
+                  quickFilters.hasEmail.value === true
+                    ? 'bg-primary text-primary-foreground border-primary font-medium'
+                    : 'bg-background text-muted-foreground hover:text-foreground border-border hover:bg-muted/40'
+                }` }
+              >
+                With Email
+              </button>
+            ) }
+
+            { quickFilters?.hasPhone && (
+              <button
+                type="button"
+                onClick={ () => quickFilters.hasPhone?.onChange( quickFilters.hasPhone.value === true ? null : true ) }
+                className={ `px-3 py-1 text-xs rounded-full border transition-colors ${
+                  quickFilters.hasPhone.value === true
+                    ? 'bg-primary text-primary-foreground border-primary font-medium'
+                    : 'bg-background text-muted-foreground hover:text-foreground border-border hover:bg-muted/40'
+                }` }
+              >
+                With Phone
+              </button>
+            ) }
+
+            { quickFilters?.hasWebsite && (
+              <button
+                type="button"
+                onClick={ () => quickFilters.hasWebsite?.onChange( quickFilters.hasWebsite.value === true ? null : true ) }
+                className={ `px-3 py-1 text-xs rounded-full border transition-colors ${
+                  quickFilters.hasWebsite.value === true
+                    ? 'bg-primary text-primary-foreground border-primary font-medium'
+                    : 'bg-background text-muted-foreground hover:text-foreground border-border hover:bg-muted/40'
+                }` }
+              >
+                With Website
+              </button>
+            ) }
+
+            { quickFilters?.hasMaps && (
+              <button
+                type="button"
+                onClick={ () => quickFilters.hasMaps?.onChange( quickFilters.hasMaps.value === true ? null : true ) }
+                className={ `px-3 py-1 text-xs rounded-full border transition-colors ${
+                  quickFilters.hasMaps.value === true
+                    ? 'bg-primary text-primary-foreground border-primary font-medium'
+                    : 'bg-background text-muted-foreground hover:text-foreground border-border hover:bg-muted/40'
+                }` }
+              >
+                With Maps
+              </button>
+            ) }
+
+            { !contactedFilter && quickFilters?.onlyPending && (
+              <button
+                type="button"
+                onClick={ () => quickFilters.onlyPending?.onChange( !quickFilters.onlyPending.value ) }
+                className={ `px-3 py-1 text-xs rounded-full border transition-colors ${
+                  quickFilters.onlyPending.value
+                    ? 'bg-primary text-primary-foreground border-primary font-medium'
+                    : 'bg-background text-muted-foreground hover:text-foreground border-border hover:bg-muted/40'
+                }` }
+              >
+                Pending Only
+              </button>
+            ) }
+
+            <div className="h-4 w-px bg-border mx-1" />
+
             <button
               type="button"
-              onClick={ onClearAllFilters }
-              className="px-2.5 py-1 text-xs text-red-500 hover:text-red-600 hover:bg-red-500/10 rounded-md transition-colors font-medium"
+              onClick={ () => setShowColumnFilters( prev => !prev ) }
+              className={ `px-3 py-1 text-xs rounded-lg border transition-colors flex items-center gap-1.5 ${
+                showColumnFilters || activeColumnFilterCount > 0
+                  ? 'bg-muted text-foreground border-foreground/30 font-medium'
+                  : 'bg-background text-muted-foreground hover:text-foreground border-border hover:bg-muted/40'
+              }` }
             >
-              Clear Filters ({ totalActiveFilters })
+              <span>Column Filters</span>
+              { activeColumnFilterCount > 0 && (
+                <span className="px-1.5 py-0.2 bg-primary text-primary-foreground text-[10px] rounded-full font-bold">
+                  { activeColumnFilterCount }
+                </span>
+              ) }
             </button>
-          ) }
+
+            { totalActiveFilters > 0 && (
+              <button
+                type="button"
+                onClick={ onClearAllFilters }
+                className="px-2.5 py-1 text-xs text-red-500 hover:text-red-600 hover:bg-red-500/10 rounded-md transition-colors font-medium"
+              >
+                Clear Filters ({ totalActiveFilters })
+              </button>
+            ) }
+          </div>
+
+          {/* TanStack Table Columns Management Dropdown */}
+          <div className="relative" ref={ columnMenuRef }>
+            <button
+              type="button"
+              onClick={ () => setShowColumnMenu( prev => !prev ) }
+              className={ `px-3 py-1 text-xs rounded-lg border transition-colors flex items-center gap-1.5 ${
+                showColumnMenu
+                  ? 'bg-muted text-foreground border-foreground/30 font-medium'
+                  : 'bg-background text-muted-foreground hover:text-foreground border-border hover:bg-muted/40'
+              }` }
+              title="Manage visible columns and ordering"
+            >
+              <span>Columns</span>
+              <span className="text-[10px] opacity-75">
+                ({ visibleLeafColumns.length }/{ allLeafColumns.length })
+              </span>
+            </button>
+
+            { showColumnMenu && (
+              <div className="absolute right-0 top-full mt-1.5 w-64 bg-background text-foreground border border-border rounded-lg shadow-xl z-50 p-2.5 text-xs space-y-2">
+                <div className="flex items-center justify-between pb-1.5 border-b border-border font-medium">
+                  <span>Manage Columns</span>
+                  <button
+                    type="button"
+                    onClick={ handleResetLayout }
+                    className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                    title="Reset column visibility and order"
+                  >
+                    Reset Layout
+                  </button>
+                </div>
+
+                <p className="text-[11px] text-muted-foreground leading-snug">
+                  Toggle visibility or use arrows to re-order. You can also drag headers directly.
+                </p>
+
+                <div className="max-h-60 overflow-y-auto space-y-1 divide-y divide-border/40 pt-1">
+                  { allLeafColumns.map( ( col, idx ) => {
+                    const meta = col.columnDef.meta as { label?: string } | undefined
+                    const label = meta?.label || col.id
+                    const isVisible = col.getIsVisible()
+                    const canHide = col.getCanHide()
+
+                    return (
+                      <div
+                        key={ col.id }
+                        className="flex items-center justify-between py-1.5 px-1 hover:bg-muted/40 rounded transition-colors group"
+                      >
+                        <label className="flex items-center gap-2 cursor-pointer flex-1 select-none">
+                          <input
+                            type="checkbox"
+                            checked={ isVisible }
+                            disabled={ !canHide }
+                            onChange={ col.getToggleVisibilityHandler() }
+                            className="w-3.5 h-3.5 rounded text-primary focus:ring-0 cursor-pointer accent-primary disabled:opacity-50"
+                          />
+                          <span className={ `truncate ${ !isVisible ? 'text-muted-foreground line-through' : 'font-medium text-foreground' }` }>
+                            { label }
+                          </span>
+                        </label>
+
+                        <div className="flex items-center gap-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
+                          <button
+                            type="button"
+                            disabled={ idx === 0 }
+                            onClick={ () => moveColumn( col.id, 'up' ) }
+                            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-20 transition-colors"
+                            title="Move earlier"
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            disabled={ idx === allLeafColumns.length - 1 }
+                            onClick={ () => moveColumn( col.id, 'down' ) }
+                            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-20 transition-colors"
+                            title="Move later"
+                          >
+                            ↓
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  } ) }
+                </div>
+              </div>
+            ) }
+          </div>
         </div>
       </div>
 
-      {/* Generated Table */}
-      { ( () => {
-        const totalColCount = columns.length + ( onToggleContacted ? 1 : 0 ) + ( onDeleteItem ? 1 : 0 )
-        return (
-          <div className="overflow-x-auto border border-border rounded-lg">
-            <table className="w-full text-left">
-              <thead className="bg-muted/50">
+      {/* TanStack Generated Table */}
+      <div className="overflow-x-auto border border-border rounded-lg">
+        <table className="w-full text-left">
+          <thead className="bg-muted/50">
+            { table.getHeaderGroups().map( ( headerGroup ) => (
+              <React.Fragment key={ headerGroup.id }>
+                {/* Header Row with HTML5 Drag-and-Drop Reordering */}
                 <tr>
-                  { columns.map( ( col ) => (
-                    <th
-                      key={ col.id }
-                      className={ `px-4 py-3 text-sm font-semibold text-foreground ${ col.headerClassName || '' }` }
-                    >
-                      { col.header }
-                    </th>
-                  ) ) }
-                  { onToggleContacted && (
-                    <th className="px-4 py-3 text-center text-sm font-semibold text-foreground w-[90px]">
-                      Contacted
-                    </th>
-                  ) }
-                  { onDeleteItem && (
-                    <th className="px-4 py-3 text-center text-sm font-semibold text-foreground w-[70px]">
-                      Actions
-                    </th>
-                  ) }
+                  { headerGroup.headers.map( ( header ) => {
+                    const meta = header.column.columnDef.meta as {
+                      headerClassName?: string
+                      className?: string
+                    } | undefined
+                    const colId = header.column.id
+                    const isDragging = draggedColId === colId
+                    const isDragOver = dragOverColId === colId
+
+                    return (
+                      <th
+                        key={ header.id }
+                        draggable={ header.column.getCanHide() }
+                        onDragStart={ ( e ) => {
+                          e.dataTransfer.setData( 'text/plain', colId )
+                          setDraggedColId( colId )
+                        } }
+                        onDragOver={ ( e ) => {
+                          e.preventDefault()
+                          if ( dragOverColId !== colId ) setDragOverColId( colId )
+                        } }
+                        onDragLeave={ () => {
+                          if ( dragOverColId === colId ) setDragOverColId( null )
+                        } }
+                        onDrop={ ( e ) => {
+                          e.preventDefault()
+                          const sourceId = e.dataTransfer.getData( 'text/plain' )
+                          setDraggedColId( null )
+                          setDragOverColId( null )
+                          if ( sourceId && sourceId !== colId ) {
+                            reorderColumns( sourceId, colId )
+                          }
+                        } }
+                        onDragEnd={ () => {
+                          setDraggedColId( null )
+                          setDragOverColId( null )
+                        } }
+                        className={ `px-4 py-3 text-sm font-semibold text-foreground select-none transition-colors ${
+                          header.column.getCanHide() ? 'cursor-grab active:cursor-grabbing hover:bg-muted/80' : ''
+                        } ${ isDragging ? 'opacity-40' : '' } ${
+                          isDragOver ? 'bg-primary/20 ring-2 ring-primary ring-inset' : ''
+                        } ${ meta?.headerClassName || '' }` }
+                        title={ header.column.getCanHide() ? 'Drag to reorder column' : undefined }
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span>{ flexRender( header.column.columnDef.header, header.getContext() ) }</span>
+                        </div>
+                      </th>
+                    )
+                  } ) }
                 </tr>
 
-                {/* Dynamic Column Filters Row */}
+                {/* Dynamic Column Filters Row positioned directly under visible headers */}
                 { showColumnFilters && (
                   <tr className="border-t border-border/60 bg-muted/20">
-                    { columns.map( ( col ) => (
-                      <th key={ `filter-${ col.id }` } className="p-2 font-normal">
-                        { col.filter ? (
-                          col.filter.type === 'select' ? (
+                    { headerGroup.headers.map( ( header ) => {
+                      const colId = header.column.id
+                      const meta = header.column.columnDef.meta as {
+                        filter?: {
+                          type: 'text' | 'select'
+                          placeholder?: string
+                          options?: { label: string; value: string }[]
+                        }
+                        label?: string
+                      } | undefined
+
+                      if ( colId === 'contacted' ) {
+                        return (
+                          <th key={ `filter-${ colId }` } className="p-2 font-normal text-center">
                             <select
-                              value={ columnFilters[ col.id ] || 'all' }
-                              onChange={ ( e ) => onColumnFilterChange( col.id, e.target.value ) }
-                              className="w-full px-2 py-1 bg-background border border-border rounded outline-none focus:border-foreground/40 text-xs text-foreground truncate"
+                              value={ contactedFilter ? contactedFilter.value : quickFilters?.onlyPending?.value ? 'pending' : 'all' }
+                              onChange={ ( e ) => {
+                                const val = e.target.value as ContactedFilterStatus
+                                if ( contactedFilter ) {
+                                  contactedFilter.onChange( val )
+                                } else {
+                                  quickFilters?.onlyPending?.onChange( val === 'pending' )
+                                }
+                              } }
+                              className="w-full px-1.5 py-1 bg-background border border-border rounded outline-none focus:border-foreground/40 text-xs text-foreground"
                             >
                               <option value="all">All</option>
-                              { col.filter.options?.map( ( opt ) => (
-                                <option key={ opt.value } value={ opt.value }>
-                                  { opt.label }
-                                </option>
-                              ) ) }
+                              <option value="contacted">Contacted</option>
+                              <option value="pending">Not Contacted</option>
                             </select>
+                          </th>
+                        )
+                      }
+
+                      if ( colId === 'actions' ) {
+                        return (
+                          <th key={ `filter-${ colId }` } className="p-2 text-center">
+                            { totalActiveFilters > 0 && (
+                              <button
+                                type="button"
+                                onClick={ onClearAllFilters }
+                                className="text-[11px] text-muted-foreground hover:text-foreground px-2 py-0.5 rounded hover:bg-muted transition-colors"
+                                title="Reset all filters"
+                              >
+                                Reset
+                              </button>
+                            ) }
+                          </th>
+                        )
+                      }
+
+                      return (
+                        <th key={ `filter-${ colId }` } className="p-2 font-normal">
+                          { meta?.filter ? (
+                            meta.filter.type === 'select' ? (
+                              <select
+                                value={ columnFilters[ colId ] || 'all' }
+                                onChange={ ( e ) => onColumnFilterChange( colId, e.target.value ) }
+                                className="w-full px-2 py-1 bg-background border border-border rounded outline-none focus:border-foreground/40 text-xs text-foreground truncate"
+                              >
+                                <option value="all">All</option>
+                                { meta.filter.options?.map( ( opt ) => (
+                                  <option key={ opt.value } value={ opt.value }>
+                                    { opt.label }
+                                  </option>
+                                ) ) }
+                              </select>
+                            ) : (
+                              <DebouncedInput
+                                type="text"
+                                placeholder={ meta.filter.placeholder || `Filter ${ ( meta.label || colId ).toLowerCase() }...` }
+                                value={ columnFilters[ colId ] || '' }
+                                onChange={ ( val ) => onColumnFilterChange( colId, val ) }
+                                className="w-full px-2 py-1 bg-background border border-border rounded outline-none focus:border-foreground/40 text-xs text-foreground placeholder:text-muted-foreground/60"
+                              />
+                            )
                           ) : (
-                            <DebouncedInput
-                              type="text"
-                              placeholder={ col.filter.placeholder || `Filter ${ col.header.toLowerCase() }...` }
-                              value={ columnFilters[ col.id ] || '' }
-                              onChange={ ( val ) => onColumnFilterChange( col.id, val ) }
-                              className="w-full px-2 py-1 bg-background border border-border rounded outline-none focus:border-foreground/40 text-xs text-foreground placeholder:text-muted-foreground/60"
-                            />
-                          )
-                        ) : (
-                          <div className="text-center text-muted-foreground text-xs">—</div>
-                        ) }
-                      </th>
-                    ) ) }
-                    { onToggleContacted && (
-                      <th className="p-2 font-normal text-center">
-                        <select
-                          value={ contactedFilter ? contactedFilter.value : quickFilters?.onlyPending?.value ? 'pending' : 'all' }
-                          onChange={ ( e ) => {
-                            const val = e.target.value as ContactedFilterStatus
-                            if ( contactedFilter ) {
-                              contactedFilter.onChange( val )
-                            } else {
-                              quickFilters?.onlyPending?.onChange( val === 'pending' )
-                            }
-                          } }
-                          className="w-full px-1.5 py-1 bg-background border border-border rounded outline-none focus:border-foreground/40 text-xs text-foreground"
-                        >
-                          <option value="all">All</option>
-                          <option value="contacted">Contacted</option>
-                          <option value="pending">Not Contacted</option>
-                        </select>
-                      </th>
-                    ) }
-                    { onDeleteItem && (
-                      <th className="p-2 text-center">
-                        { totalActiveFilters > 0 && (
-                          <button
-                            type="button"
-                            onClick={ onClearAllFilters }
-                            className="text-[11px] text-muted-foreground hover:text-foreground px-2 py-0.5 rounded hover:bg-muted transition-colors"
-                            title="Reset all filters"
-                          >
-                            Reset
-                          </button>
-                        ) }
-                      </th>
-                    ) }
+                            <div className="text-center text-muted-foreground text-xs">—</div>
+                          )}
+                        </th>
+                      )
+                    } ) }
                   </tr>
-                ) }
-              </thead>
-              <tbody className={ `divide-y divide-border ${ loading && data.length > 0 ? 'opacity-50 transition-opacity' : '' }` }>
-                { loading && data.length === 0 ? (
-                  <tr>
-                    <td colSpan={ totalColCount } className="text-center py-12 text-muted-foreground">
-                      Loading records...
-                    </td>
-                  </tr>
-                ) : data.length === 0 ? (
-                  <tr>
-                    <td colSpan={ totalColCount } className="text-center py-12 text-muted-foreground">
-                      { emptyMessage }
-                    </td>
-                  </tr>
-                ) : (
-                  data.map( ( item ) => (
-                    <tr key={ item.id } className="hover:bg-muted/30 transition-colors align-top">
-                      { columns.map( ( col ) => (
-                        <td key={ `${ item.id }-${ col.id }` } className={ `px-4 py-3 ${ col.className || '' }` }>
-                          { col.cell( item ) }
-                        </td>
-                      ) ) }
+                )}
+              </React.Fragment>
+            ) ) }
+          </thead>
 
-                      { onToggleContacted && (
-                        <td className="px-4 py-3 text-center align-middle">
-                          <input
-                            type="checkbox"
-                            checked={ Boolean( item.contacted ) }
-                            onChange={ () => onToggleContacted( item.id, Boolean( item.contacted ) ) }
-                            className="w-5 h-5 cursor-pointer accent-primary"
-                          />
-                        </td>
-                      ) }
+          <tbody className={ `divide-y divide-border ${ loading && data.length > 0 ? 'opacity-50 transition-opacity' : '' }` }>
+            { loading && data.length === 0 ? (
+              <tr>
+                <td colSpan={ visibleLeafColumns.length || 1 } className="text-center py-12 text-muted-foreground">
+                  Loading records...
+                </td>
+              </tr>
+            ) : data.length === 0 ? (
+              <tr>
+                <td colSpan={ visibleLeafColumns.length || 1 } className="text-center py-12 text-muted-foreground">
+                  { emptyMessage }
+                </td>
+              </tr>
+            ) : (
+              table.getRowModel().rows.map( ( row ) => (
+                <tr key={ row.id } className="hover:bg-muted/30 transition-colors">
+                  { row.getVisibleCells().map( ( cell ) => {
+                    const meta = cell.column.columnDef.meta as { className?: string } | undefined
+                    return (
+                      <td
+                        key={ cell.id }
+                        className={ `px-4 py-3 text-sm ${ meta?.className || '' }` }
+                      >
+                        { flexRender( cell.column.columnDef.cell, cell.getContext() ) }
+                      </td>
+                    )
+                  } ) }
+                </tr>
+              ) )
+            ) }
+          </tbody>
+        </table>
+      </div>
 
-                      { onDeleteItem && (
-                        <td className="px-4 py-3 text-center align-middle">
-                          <button
-                            type="button"
-                            onClick={ () => onDeleteItem( item.id, item ) }
-                            className="px-2 py-1 text-xs text-muted-foreground hover:text-red-600 transition-colors rounded hover:bg-red-50 dark:hover:bg-red-950/30"
-                            title="Delete record"
-                          >
-                            Delete
-                          </button>
-                        </td>
-                      ) }
-                    </tr>
-                  ) )
-                ) }
-              </tbody>
-            </table>
-          </div>
-        )
-      } )() }
-
-      {/* Pagination */}
-      { totalPages > 1 && (
-        <div className="flex items-center justify-between pt-2">
-          <span className="text-xs text-muted-foreground">
-            Page { page } of { totalPages } ({ total } total)
-          </span>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={ () => onPageChange( p => Math.max( 1, ( typeof p === 'number' ? p : page ) - 1 ) ) }
-              disabled={ page <= 1 }
-              className="px-3 py-1.5 bg-background border border-border rounded-lg text-xs font-medium hover:bg-muted/50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              Previous
-            </button>
-            <button
-              type="button"
-              onClick={ () => onPageChange( p => Math.min( totalPages, ( typeof p === 'number' ? p : page ) + 1 ) ) }
-              disabled={ page >= totalPages }
-              className="px-3 py-1.5 bg-background border border-border rounded-lg text-xs font-medium hover:bg-muted/50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              Next
-            </button>
-          </div>
+      {/* Pagination Controls */}
+      <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground pt-2">
+        <div>
+          Showing page <span className="font-semibold text-foreground">{ page }</span> of{' '}
+          <span className="font-semibold text-foreground">{ totalPages }</span>
         </div>
-      ) }
+
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={ () => onPageChange( prev => Math.max( prev - 1, 1 ) ) }
+            disabled={ page <= 1 || loading }
+            className="px-3 py-1 bg-background border border-border rounded-lg hover:bg-muted text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium text-xs"
+          >
+            Previous
+          </button>
+
+          { Array.from( { length: Math.min( 5, totalPages ) }, ( _, i ) => {
+            let pageNum = page
+            if ( totalPages <= 5 ) {
+              pageNum = i + 1
+            } else if ( page <= 3 ) {
+              pageNum = i + 1
+            } else if ( page >= totalPages - 2 ) {
+              pageNum = totalPages - 4 + i
+            } else {
+              pageNum = page - 2 + i
+            }
+
+            return (
+              <button
+                key={ pageNum }
+                type="button"
+                onClick={ () => onPageChange( pageNum ) }
+                disabled={ loading }
+                className={ `w-8 h-8 rounded-lg text-xs font-medium transition-colors ${
+                  pageNum === page
+                    ? 'bg-primary text-primary-foreground font-bold'
+                    : 'bg-background border border-border text-foreground hover:bg-muted'
+                }` }
+              >
+                { pageNum }
+              </button>
+            )
+          } ) }
+
+          <button
+            type="button"
+            onClick={ () => onPageChange( prev => Math.min( prev + 1, totalPages ) ) }
+            disabled={ page >= totalPages || loading }
+            className="px-3 py-1 bg-background border border-border rounded-lg hover:bg-muted text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium text-xs"
+          >
+            Next
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
