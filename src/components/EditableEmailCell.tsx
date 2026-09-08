@@ -132,7 +132,7 @@ export function EditableEmailCell ( {
           className="text-xs text-muted-foreground/70 hover:text-foreground px-1.5 py-0.5 rounded border border-dashed border-border/80 hover:border-border hover:bg-muted/40 transition-colors"
           title="Add email address"
         >
-          + Add email
+          + Add
         </button>
       </div>
     )
