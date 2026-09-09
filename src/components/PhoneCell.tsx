@@ -26,12 +26,20 @@ export function PhoneCell ( {
   const [ isSaving, setIsSaving ] = useState( false )
   const inputRef = useRef<HTMLInputElement>( null )
 
+  const prevIdRef = useRef( id )
   useEffect( () => {
+    if ( prevIdRef.current !== id ) {
+      prevIdRef.current = id
+      setIsEditing( false )
+      setCurrentPhone( phone || '' )
+      setDraftPhone( phone || '' )
+      return
+    }
     setCurrentPhone( phone || '' )
     if ( !isEditing ) {
       setDraftPhone( phone || '' )
     }
-  }, [ phone, isEditing ] )
+  }, [ id, phone, isEditing ] )
 
   useEffect( () => {
     if ( isEditing && inputRef.current ) {
@@ -43,11 +51,17 @@ export function PhoneCell ( {
   const handleStartEditing = () => {
     setDraftPhone( currentPhone )
     setIsEditing( true )
+    if ( typeof window !== 'undefined' ) {
+      window.dispatchEvent( new CustomEvent( 'crm-cell-edit-start' ) )
+    }
   }
 
   const handleCancel = () => {
     setDraftPhone( currentPhone )
     setIsEditing( false )
+    if ( typeof window !== 'undefined' ) {
+      window.dispatchEvent( new CustomEvent( 'crm-cell-edit-end' ) )
+    }
   }
 
   const handleCommit = async () => {
@@ -71,6 +85,9 @@ export function PhoneCell ( {
 
       setCurrentPhone( finalValue || '' )
       setIsEditing( false )
+      if ( typeof window !== 'undefined' ) {
+        window.dispatchEvent( new CustomEvent( 'crm-cell-edit-end' ) )
+      }
     } catch ( err ) {
       console.error( 'Error saving phone:', err )
       alert( 'Could not save phone. Please try again.' )
@@ -95,6 +112,7 @@ export function PhoneCell ( {
         <input
           ref={ inputRef }
           type="tel"
+          data-editing-cell="true"
           value={ draftPhone }
           disabled={ isSaving }
           onChange={ ( e ) => setDraftPhone( e.target.value ) }
@@ -159,15 +177,27 @@ export function PhoneCell ( {
       </a>
 
       { info.isMobile && (
-        <a
-          href={ info.whatsappUrl! }
-          target="_blank"
-          rel="noopener noreferrer"
-          title="Open WhatsApp chat"
-          className="text-[10px] px-1 py-0.2 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 rounded border border-emerald-200 dark:border-emerald-800 font-medium shrink-0 hover:bg-emerald-100 dark:hover:bg-emerald-900 transition-colors"
-        >
-          WA
-        </a>
+        <>
+          <a
+            href={ info.whatsappUrl! }
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Open WhatsApp chat"
+            className="text-[10px] px-1 py-0.2 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 rounded border border-emerald-200 dark:border-emerald-800 font-medium shrink-0 hover:bg-emerald-100 dark:hover:bg-emerald-900 transition-colors"
+          >
+            WA
+          </a>
+
+          { info.smsUrl && (
+            <a
+              href={ info.smsUrl }
+              title="Open Apple Messages / SMS"
+              className="text-[10px] px-1 py-0.2 bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 rounded border border-sky-200 dark:border-sky-800 font-medium shrink-0 hover:bg-sky-100 dark:hover:bg-sky-900 transition-colors"
+            >
+              MSG
+            </a>
+          ) }
+        </>
       ) }
 
       <button

@@ -122,6 +122,44 @@ export function DirectoryView<T extends { id: string; name?: string; contacted?:
     setPage( 1 )
   }
 
+  const pendingDataRef = useRef<{
+    list: T[]
+    primaryOptions?: { name: string; count: number }[]
+    stats?: { total?: number; contacted?: number; pending?: number }
+    pagination?: { totalPages?: number; total?: number }
+  } | null>( null )
+
+  const isEditingCell = useCallback( () => {
+    if ( typeof document === 'undefined' ) return false
+    const activeEl = document.activeElement
+    if (
+      activeEl &&
+      ( activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' ) &&
+      Boolean( activeEl.closest( 'td' ) )
+    ) {
+      return true
+    }
+    return Boolean( document.querySelector( 'td [data-editing-cell="true"], td input:not([type="checkbox"])' ) )
+  }, [] )
+
+  const applyPendingData = useCallback( () => {
+    if ( !pendingDataRef.current ) return
+    const { list, primaryOptions, stats, pagination } = pendingDataRef.current
+    pendingDataRef.current = null
+    setItems( list )
+    if ( primaryOptions && primaryFilterConfig ) {
+      setPrimaryFilterOptions( primaryOptions )
+    }
+    if ( stats ) {
+      setTotal( stats.total ?? pagination?.total ?? list.length )
+      setContactedCount( stats.contacted ?? 0 )
+      setPendingCount( stats.pending ?? 0 )
+    }
+    if ( pagination ) {
+      setTotalPages( pagination.totalPages || 1 )
+    }
+  }, [ primaryFilterConfig ] )
+
   const fetchItems = useCallback( async ( isInitial = false ) => {
     if ( isInitial ) setLoading( true )
     try {
@@ -151,17 +189,29 @@ export function DirectoryView<T extends { id: string; name?: string; contacted?:
       const data = await response.json()
 
       const list = ( data[ itemsKey ] || data.items || [] ) as T[]
-      setItems( list )
+      const primaryOptions = primaryFilterConfig && data[ primaryFilterConfig.responseKey ]
+        ? data[ primaryFilterConfig.responseKey ]
+        : undefined
+      const stats = data.stats || {}
+      const pagination = data.pagination || {}
 
-      if ( primaryFilterConfig && data[ primaryFilterConfig.responseKey ] ) {
-        setPrimaryFilterOptions( data[ primaryFilterConfig.responseKey ] )
+      if ( !isInitial && isEditingCell() ) {
+        // Active cell edit in progress: buffer incoming updates to avoid interrupting user input
+        pendingDataRef.current = { list, primaryOptions, stats, pagination }
+        return
       }
 
-      const stats = data.stats || {}
-      setTotal( stats.total ?? data.pagination?.total ?? list.length )
+      pendingDataRef.current = null
+      setItems( list )
+
+      if ( primaryOptions ) {
+        setPrimaryFilterOptions( primaryOptions )
+      }
+
+      setTotal( stats.total ?? pagination.total ?? list.length )
       setContactedCount( stats.contacted ?? 0 )
       setPendingCount( stats.pending ?? 0 )
-      setTotalPages( data.pagination?.totalPages || 1 )
+      setTotalPages( pagination.totalPages || 1 )
     } catch ( error ) {
       console.error( `Failed to fetch from ${ apiEndpoint }:`, error )
     } finally {
@@ -180,6 +230,7 @@ export function DirectoryView<T extends { id: string; name?: string; contacted?:
     primaryFilterConfig,
     primaryFilterValue,
     columnFilters,
+    isEditingCell,
   ] )
 
   const isInitialMountRef = useRef( true )
@@ -205,14 +256,43 @@ export function DirectoryView<T extends { id: string; name?: string; contacted?:
     }
 
     const pollInterval = setInterval( () => {
-      fetchItems( false )
+      if ( isEditingCell() ) return
+      if ( pendingDataRef.current ) {
+        applyPendingData()
+      } else {
+        fetchItems( false )
+      }
     }, 2500 )
+
+    const handleEditEnd = () => {
+      setTimeout( () => {
+        if ( !isEditingCell() && pendingDataRef.current ) {
+          applyPendingData()
+        }
+      }, 100 )
+    }
+
+    const handleFocusOut = ( e: FocusEvent ) => {
+      const target = e.target as HTMLElement | null
+      if ( target && target.tagName === 'INPUT' && target.closest( 'td' ) ) {
+        setTimeout( () => {
+          if ( !isEditingCell() && pendingDataRef.current ) {
+            applyPendingData()
+          }
+        }, 200 )
+      }
+    }
+
+    window.addEventListener( 'crm-cell-edit-end', handleEditEnd )
+    document.addEventListener( 'focusout', handleFocusOut )
 
     return () => {
       if ( eventSource ) eventSource.close()
       clearInterval( pollInterval )
+      window.removeEventListener( 'crm-cell-edit-end', handleEditEnd )
+      document.removeEventListener( 'focusout', handleFocusOut )
     }
-  }, [ fetchItems, sseEvents ] )
+  }, [ fetchItems, sseEvents, isEditingCell, applyPendingData ] )
 
   const toggleContacted = async ( id: string, currentStatus: boolean ) => {
     try {

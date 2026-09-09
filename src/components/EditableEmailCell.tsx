@@ -25,12 +25,20 @@ export function EditableEmailCell ( {
   const [ isSaving, setIsSaving ] = useState( false )
   const inputRef = useRef<HTMLInputElement>( null )
 
+  const prevIdRef = useRef( id )
   useEffect( () => {
+    if ( prevIdRef.current !== id ) {
+      prevIdRef.current = id
+      setIsEditing( false )
+      setCurrentEmail( email || '' )
+      setDraftEmail( email || '' )
+      return
+    }
     setCurrentEmail( email || '' )
     if ( !isEditing ) {
       setDraftEmail( email || '' )
     }
-  }, [ email, isEditing ] )
+  }, [ id, email, isEditing ] )
 
   useEffect( () => {
     if ( isEditing && inputRef.current ) {
@@ -42,11 +50,17 @@ export function EditableEmailCell ( {
   const handleStartEditing = () => {
     setDraftEmail( currentEmail )
     setIsEditing( true )
+    if ( typeof window !== 'undefined' ) {
+      window.dispatchEvent( new CustomEvent( 'crm-cell-edit-start' ) )
+    }
   }
 
   const handleCancel = () => {
     setDraftEmail( currentEmail )
     setIsEditing( false )
+    if ( typeof window !== 'undefined' ) {
+      window.dispatchEvent( new CustomEvent( 'crm-cell-edit-end' ) )
+    }
   }
 
   const handleCommit = async () => {
@@ -70,6 +84,9 @@ export function EditableEmailCell ( {
 
       setCurrentEmail( finalValue || '' )
       setIsEditing( false )
+      if ( typeof window !== 'undefined' ) {
+        window.dispatchEvent( new CustomEvent( 'crm-cell-edit-end' ) )
+      }
     } catch ( err ) {
       console.error( 'Error saving email:', err )
       alert( 'Could not save email. Please try again.' )
@@ -94,6 +111,7 @@ export function EditableEmailCell ( {
         <input
           ref={ inputRef }
           type="email"
+          data-editing-cell="true"
           value={ draftEmail }
           disabled={ isSaving }
           onChange={ ( e ) => setDraftEmail( e.target.value ) }

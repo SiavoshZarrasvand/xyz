@@ -341,6 +341,7 @@ export function DataTable<T extends { id: string; contacted?: boolean }> ( {
   const table = useReactTable( {
     data,
     columns: tanstackColumns,
+    getRowId: ( row ) => row.id,
     state: {
       columnVisibility,
       columnOrder,

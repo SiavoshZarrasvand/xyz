@@ -21,12 +21,20 @@ export function EditableWebsiteCell ( {
   const [ isSaving, setIsSaving ] = useState( false )
   const inputRef = useRef<HTMLInputElement>( null )
 
+  const prevIdRef = useRef( id )
   useEffect( () => {
+    if ( prevIdRef.current !== id ) {
+      prevIdRef.current = id
+      setIsEditing( false )
+      setCurrentWebsite( website || '' )
+      setDraftWebsite( website || '' )
+      return
+    }
     setCurrentWebsite( website || '' )
     if ( !isEditing ) {
       setDraftWebsite( website || '' )
     }
-  }, [ website, isEditing ] )
+  }, [ id, website, isEditing ] )
 
   useEffect( () => {
     if ( isEditing && inputRef.current ) {
@@ -38,11 +46,17 @@ export function EditableWebsiteCell ( {
   const handleStartEditing = () => {
     setDraftWebsite( currentWebsite )
     setIsEditing( true )
+    if ( typeof window !== 'undefined' ) {
+      window.dispatchEvent( new CustomEvent( 'crm-cell-edit-start' ) )
+    }
   }
 
   const handleCancel = () => {
     setDraftWebsite( currentWebsite )
     setIsEditing( false )
+    if ( typeof window !== 'undefined' ) {
+      window.dispatchEvent( new CustomEvent( 'crm-cell-edit-end' ) )
+    }
   }
 
   const handleCommit = async () => {
@@ -74,6 +88,9 @@ export function EditableWebsiteCell ( {
 
       setCurrentWebsite( finalValue || '' )
       setIsEditing( false )
+      if ( typeof window !== 'undefined' ) {
+        window.dispatchEvent( new CustomEvent( 'crm-cell-edit-end' ) )
+      }
     } catch ( err ) {
       console.error( 'Error saving website:', err )
       alert( 'Could not save website. Please try again.' )
@@ -98,6 +115,7 @@ export function EditableWebsiteCell ( {
         <input
           ref={ inputRef }
           type="text"
+          data-editing-cell="true"
           value={ draftWebsite }
           disabled={ isSaving }
           onChange={ ( e ) => setDraftWebsite( e.target.value ) }

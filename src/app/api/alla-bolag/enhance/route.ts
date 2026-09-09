@@ -44,10 +44,11 @@ export async function POST ( request: NextRequest ) {
       const name = typeof item.name === 'string' ? item.name.trim() : ''
       const website = typeof item.website === 'string' && item.website.trim() ? item.website.trim() : null
       const googleMapsUrl = typeof item.url === 'string' && item.url.trim() ? item.url.trim() : null
-      const phone = typeof item.phone === 'string' && item.phone.trim() ? item.phone.replace( /\D/g, '' ) : null
+      const rawPhone = typeof item.phone === 'string' && item.phone.trim() ? item.phone.trim() : null
+      const phoneDigits = rawPhone ? rawPhone.replace( /\D/g, '' ) : null
       const tag = typeof item.tag === 'string' ? item.tag.trim() : ''
 
-      if ( !website && !googleMapsUrl ) continue
+      if ( !website && !googleMapsUrl && !rawPhone ) continue
 
       // Look up matching AllaBolagCompany
       let company = null
@@ -97,8 +98,8 @@ export async function POST ( request: NextRequest ) {
       }
 
       // 5. By phone number digits
-      if ( !company && phone && phone.length >= 7 ) {
-        const last7 = phone.slice( -7 )
+      if ( !company && phoneDigits && phoneDigits.length >= 7 ) {
+        const last7 = phoneDigits.slice( -7 )
         company = await prisma.allaBolagCompany.findFirst( {
           where: {
             phone: { contains: last7 },
@@ -107,16 +108,34 @@ export async function POST ( request: NextRequest ) {
       }
 
       if ( company ) {
+        // Determine whether to save or upgrade telephone number:
+        // 1. If company currently has no phone, save the newly found phone
+        // 2. If newly found phone is a mobile number (e.g. 07x) and existing is landline, upgrade to mobile
+        const isNewMobile = rawPhone ? /^(\+46\s*7|07)[02369]/.test( rawPhone.replace( /[\s.-]/g, '' ) ) : false
+        const currentIsMobile = company.phone ? /^(\+46\s*7|07)[02369]/.test( company.phone.replace( /[\s.-]/g, '' ) ) : false
+
+        let targetPhone = company.phone
+        if ( !targetPhone && rawPhone ) {
+          targetPhone = rawPhone
+        } else if ( isNewMobile && !currentIsMobile && rawPhone ) {
+          targetPhone = rawPhone
+        }
+
         await prisma.allaBolagCompany.update( {
           where: { id: company.id },
           data: {
             website: website || company.website,
             googleMapsUrl: googleMapsUrl || company.googleMapsUrl,
-            phone: company.phone || item.phone || null,
+            phone: targetPhone,
           },
         } )
         updatedCount++
-        enhancedCompanies.push( `${ company.name } -> ${ website || 'Maps URL' }` )
+        const parts = [
+          website ? `Website: ${ website }` : null,
+          targetPhone && targetPhone !== company.phone ? `Phone: ${ targetPhone }` : null,
+          googleMapsUrl ? 'Maps URL' : null,
+        ].filter( Boolean )
+        enhancedCompanies.push( `${ company.name } -> ${ parts.join( ', ' ) || 'Updated' }` )
       }
     }
 

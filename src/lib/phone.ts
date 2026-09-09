@@ -9,6 +9,7 @@ export interface PhoneInfo {
   href: string
   type: 'whatsapp' | 'tel'
   whatsappUrl: string | null
+  smsUrl: string | null
   telUrl: string
 }
 
@@ -18,6 +19,7 @@ export function parsePhoneNumber ( raw: string ): PhoneInfo {
 
   let isMobile = false
   let waDigits = ''
+  let intlDigits = ''
 
   // Swedish mobile patterns:
   // - Starts with 07 (070, 072, 073, 076, 079) and has 9 to 11 digits
@@ -31,10 +33,12 @@ export function parsePhoneNumber ( raw: string ): PhoneInfo {
     if ( after46.startsWith( '7' ) && after46.length >= 8 && after46.length <= 10 ) {
       isMobile = true
       waDigits = `46${ after46 }`
+      intlDigits = `+46${ after46 }`
     }
   } else if ( digits.startsWith( '07' ) && digits.length >= 9 && digits.length <= 11 ) {
     isMobile = true
     waDigits = `46${ digits.slice( 1 ) }`
+    intlDigits = `+46${ digits.slice( 1 ) }`
   } else if ( trimmed.startsWith( '+' ) ) {
     // Common international mobile formats
     if (
@@ -45,11 +49,13 @@ export function parsePhoneNumber ( raw: string ): PhoneInfo {
     ) {
       isMobile = true
       waDigits = digits
+      intlDigits = `+${ digits }`
     }
   }
 
   const telUrl = `tel:${ trimmed.startsWith( '+' ) ? '+' : '' }${ digits }`
   const whatsappUrl = isMobile && waDigits ? `https://wa.me/${ waDigits }` : null
+  const smsUrl = isMobile && intlDigits ? `sms:${ intlDigits }` : null
 
   return {
     raw: trimmed,
@@ -58,6 +64,7 @@ export function parsePhoneNumber ( raw: string ): PhoneInfo {
     href: isMobile && whatsappUrl ? whatsappUrl : telUrl,
     type: isMobile ? 'whatsapp' : 'tel',
     whatsappUrl,
+    smsUrl,
     telUrl,
   }
 }
