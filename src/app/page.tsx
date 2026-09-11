@@ -14,6 +14,7 @@ interface StatsResponse {
   maps?: ToolStats
   inCosmetics?: ToolStats
   allaBolag?: ToolStats
+  kiteBeach?: ToolStats
   total?: number
   contacted?: number
   notContacted?: number
@@ -84,7 +85,7 @@ export default function Home () {
           </div>
 
           {/* Extractor Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Card 1: Google Maps Data Extractor */}
             <div
               onClick={ () => router.push( '/google-maps' ) }
@@ -185,6 +186,41 @@ export default function Home () {
                 <div className="flex items-center gap-2 text-[11px]">
                   <span className="text-green-600 dark:text-green-400">
                     { stats?.allaBolag?.contacted ?? 0 } contacted
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 4: Kite Beach Directory */}
+            <div
+              onClick={ () => router.push( '/kitebeach' ) }
+              className="p-6 rounded-xl border border-border bg-background/60 hover:bg-muted/40 hover:border-teal-500/40 transition-all duration-200 cursor-pointer flex flex-col justify-between group shadow-sm hover:shadow-md"
+            >
+              <div className="space-y-3">
+                <div className="w-12 h-12 rounded-lg bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-2xl group-hover:scale-105 transition-transform">
+                  🪁
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-foreground group-hover:text-teal-600 transition-colors flex items-center gap-1.5">
+                    <span>Kite Beach Directory</span>
+                    <span className="opacity-0 group-hover:opacity-100 text-sm transition-opacity">→</span>
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                    Kite schools, downwinder operators, rentals, and beach spots in Ceará (Cumbuco, Taíba, Jeri) with verified WhatsApp.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-border/60 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-foreground">
+                    { stats?.kiteBeach?.total ?? 0 }
+                  </span>
+                  <span className="text-muted-foreground">suppliers</span>
+                </div>
+                <div className="flex items-center gap-2 text-[11px]">
+                  <span className="text-green-600 dark:text-green-400">
+                    { stats?.kiteBeach?.contacted ?? 0 } contacted
                   </span>
                 </div>
               </div>

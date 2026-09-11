@@ -20,6 +20,8 @@ export type CRMEvent =
   | { type: 'INCOSMETICS_DELETED'; count: number; timestamp: number }
   | { type: 'ALLABOLAG_UPDATED'; total: number; timestamp: number }
   | { type: 'ALLABOLAG_DELETED'; count: number; timestamp: number }
+  | { type: 'KITE_BEACH_UPDATED'; total: number; timestamp: number }
+  | { type: 'KITE_BEACH_DELETED'; count: number; timestamp: number }
 
 export function broadcastCrmEvent ( event: CRMEvent ) {
   crmEvents.emit( 'event', event )

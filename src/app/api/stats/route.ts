@@ -10,6 +10,8 @@ export async function GET () {
       inCosmeticsContacted,
       allaBolagTotal,
       allaBolagContacted,
+      kiteBeachTotal,
+      kiteBeachContacted,
     ] = await Promise.all( [
       prisma.contact.count(),
       prisma.contact.count( { where: { contacted: true } } ),
@@ -17,6 +19,8 @@ export async function GET () {
       prisma.inCosmeticsExhibitor.count( { where: { contacted: true } } ),
       prisma.allaBolagCompany.count(),
       prisma.allaBolagCompany.count( { where: { contacted: true } } ),
+      prisma.kiteBeachSupplier.count(),
+      prisma.kiteBeachSupplier.count( { where: { contacted: true } } ),
     ] )
 
     return NextResponse.json( {
@@ -34,6 +38,11 @@ export async function GET () {
         total: allaBolagTotal,
         contacted: allaBolagContacted,
         pending: allaBolagTotal - allaBolagContacted,
+      },
+      kiteBeach: {
+        total: kiteBeachTotal,
+        contacted: kiteBeachContacted,
+        pending: kiteBeachTotal - kiteBeachContacted,
       },
       // Backward compatibility fields
       total: mapsTotal,

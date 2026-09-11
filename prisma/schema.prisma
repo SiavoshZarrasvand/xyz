@@ -82,3 +82,34 @@ model AllaBolagCompany {
   @@index([website])
 }
 
+model KiteBeachSupplier {
+  id            String    @id @default(uuid())
+  name          String
+  beach         String?
+  city          String?
+  state         String?   @default("CE")
+  country       String?   @default("Brazil")
+  category      String?
+  phone         String?
+  email         String?
+  website       String?
+  instagram     String?
+  address       String?
+  rating        Float?
+  reviews       Int?
+  googleMapsUrl String?
+  hours         String?
+  tag           String?
+  notes         String?
+  contacted     Boolean   @default(false)
+  contactedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([contacted])
+  @@index([beach])
+  @@index([phone])
+  @@index([category])
+  @@index([tag])
+}
+

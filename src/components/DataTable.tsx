@@ -352,18 +352,17 @@ export function DataTable<T extends { id: string; contacted?: boolean }> ( {
   } )
 
   // Filter stats calculations
-  const activeColumnFilterCount = Object.keys( columnFilters ).length
-  const hasQuickFilter = (
-    ( contactedFilter && contactedFilter.value !== 'all' ) ||
-    ( !contactedFilter && quickFilters?.onlyPending?.value ) ||
-    quickFilters?.hasEmail?.value !== null ||
-    quickFilters?.hasPhone?.value !== null ||
-    quickFilters?.hasWebsite?.value !== null ||
-    quickFilters?.hasMaps?.value !== null ||
-    ( primaryFilter && primaryFilter.value !== 'all' )
-  )
+  const activeColumnFilterCount = Object.keys( columnFilters ).filter( k => Boolean( columnFilters[ k ] && columnFilters[ k ].trim() ) ).length
+  let activeQuickFilterCount = 0
+  if ( contactedFilter && contactedFilter.value !== 'all' ) activeQuickFilterCount++
+  if ( !contactedFilter && quickFilters?.onlyPending?.value ) activeQuickFilterCount++
+  if ( quickFilters?.hasEmail && quickFilters.hasEmail.value !== null && quickFilters.hasEmail.value !== undefined ) activeQuickFilterCount++
+  if ( quickFilters?.hasPhone && quickFilters.hasPhone.value !== null && quickFilters.hasPhone.value !== undefined ) activeQuickFilterCount++
+  if ( quickFilters?.hasWebsite && quickFilters.hasWebsite.value !== null && quickFilters.hasWebsite.value !== undefined ) activeQuickFilterCount++
+  if ( quickFilters?.hasMaps && quickFilters.hasMaps.value !== null && quickFilters.hasMaps.value !== undefined ) activeQuickFilterCount++
+  if ( primaryFilter && primaryFilter.value && primaryFilter.value !== 'all' ) activeQuickFilterCount++
 
-  const totalActiveFilters = activeColumnFilterCount + ( hasQuickFilter ? 1 : 0 )
+  const totalActiveFilters = activeColumnFilterCount + activeQuickFilterCount
   const visibleLeafColumns = table.getVisibleLeafColumns()
   const allLeafColumns = table.getAllLeafColumns()
 
@@ -581,9 +580,11 @@ export function DataTable<T extends { id: string; contacted?: boolean }> ( {
               <button
                 type="button"
                 onClick={ onClearAllFilters }
-                className="px-2.5 py-1 text-xs text-red-500 hover:text-red-600 hover:bg-red-500/10 rounded-md transition-colors font-medium"
+                className="px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/60 rounded-lg border border-border/70 transition-colors font-medium flex items-center gap-1.5"
+                title="Reset all active filters"
               >
-                Clear Filters ({ totalActiveFilters })
+                <span>✕</span>
+                <span>Clear Filters ({ totalActiveFilters })</span>
               </button>
             ) }
           </div>

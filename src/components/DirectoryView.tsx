@@ -8,7 +8,7 @@ export interface DirectoryViewProps<T extends { id: string; name?: string; conta
   // Directory metadata
   title: string
   subtitle: string
-  activeNav: 'contacts' | 'in-cosmetics' | 'alla-bolag'
+  activeNav: 'contacts' | 'in-cosmetics' | 'alla-bolag' | 'kitebeach'
 
   // API configuration
   apiEndpoint: string
@@ -417,6 +417,16 @@ export function DirectoryView<T extends { id: string; name?: string; contacted?:
                 }` }
               >
                 Alla Bolag
+              </button>
+              <button
+                onClick={ () => router.push( '/kitebeach' ) }
+                className={ `px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                  activeNav === 'kitebeach'
+                    ? 'font-semibold bg-muted/60 text-foreground border border-border'
+                    : 'text-muted-foreground hover:text-foreground'
+                }` }
+              >
+                Kite Beach
               </button>
             </nav>
           </div>
