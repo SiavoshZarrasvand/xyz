@@ -270,6 +270,17 @@ export async function GET ( request: NextRequest ) {
         pendingCount,
         page,
         totalPages,
+        stats: {
+          total,
+          contacted: contactedCount,
+          pending: pendingCount,
+        },
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages,
+        },
       },
       { headers: corsFor( request ) }
     )
