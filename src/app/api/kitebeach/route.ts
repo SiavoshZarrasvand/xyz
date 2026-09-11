@@ -101,7 +101,7 @@ const KNOWN_SPOTS: SpotDef[] = [
   // ==========================================
   // Cyclades
   { pattern: /\b(?:paros|pounta|pounda|santa\s+maria)\b/i, name: 'Paros (Pounda)', defaultCity: 'Paros', defaultState: 'Cyclades', defaultCountry: 'Greece' },
-  { pattern: /\b(?:naxos|mikri\s+vigla|glyfada\s+naxos)\b/i, name: 'Naxos (Mikri Vigla)', defaultCity: 'Naxos', defaultState: 'Cyclades', defaultCountry: 'Greece' },
+  { pattern: /\b(?:naxos|mikri\s+vigla|glyfada)\b/i, name: 'Naxos (Mikri Vigla)', defaultCity: 'Naxos', defaultState: 'Cyclades', defaultCountry: 'Greece' },
   { pattern: /\b(?:mykonos|korfos|ftelia)\b/i, name: 'Mykonos (Korfos)', defaultCity: 'Mykonos', defaultState: 'Cyclades', defaultCountry: 'Greece' },
   { pattern: /\b(?:santorini|monolithos)\b/i, name: 'Santorini (Monolithos)', defaultCity: 'Santorini', defaultState: 'Cyclades', defaultCountry: 'Greece' },
 
