@@ -91,13 +91,49 @@ const KNOWN_SPOTS: SpotDef[] = [
   { pattern: /\bbarreirinhas\b/i, name: 'Barreirinhas', defaultCity: 'Barreirinhas', defaultState: 'MA' },
 
   // Rio Grande do Norte (RN) — Kite Coast
-  { pattern: /\btibau\b/i, name: 'Tibau', defaultCity: 'Tibau', defaultState: 'RN' },
-  { pattern: /\b(?:galinhos|galos)\b/i, name: 'Galinhos', defaultCity: 'Galinhos', defaultState: 'RN' },
-  { pattern: /\b(?:s[aã]o\s+miguel\s+do\s+gostoso|gostoso)\b/i, name: 'São Miguel do Gostoso', defaultCity: 'São Miguel do Gostoso', defaultState: 'RN' },
-  { pattern: /\btouros\b/i, name: 'Touros', defaultCity: 'Touros', defaultState: 'RN' },
+  { pattern: /\btibau\b/i, name: 'Tibau', defaultCity: 'Tibau', defaultState: 'RN', defaultCountry: 'Brazil' },
+  { pattern: /\b(?:galinhos|galos)\b/i, name: 'Galinhos', defaultCity: 'Galinhos', defaultState: 'RN', defaultCountry: 'Brazil' },
+  { pattern: /\b(?:s[aã]o\s+miguel\s+do\s+gostoso|gostoso)\b/i, name: 'São Miguel do Gostoso', defaultCity: 'São Miguel do Gostoso', defaultState: 'RN', defaultCountry: 'Brazil' },
+  { pattern: /\btouros\b/i, name: 'Touros', defaultCity: 'Touros', defaultState: 'RN', defaultCountry: 'Brazil' },
+
+  // ==========================================
+  // Greece — Premier Aegean & Ionian Kite Destinations
+  // ==========================================
+  // Cyclades
+  { pattern: /\b(?:paros|pounta|pounda|santa\s+maria)\b/i, name: 'Paros (Pounda)', defaultCity: 'Paros', defaultState: 'Cyclades', defaultCountry: 'Greece' },
+  { pattern: /\b(?:naxos|mikri\s+vigla|glyfada\s+naxos)\b/i, name: 'Naxos (Mikri Vigla)', defaultCity: 'Naxos', defaultState: 'Cyclades', defaultCountry: 'Greece' },
+  { pattern: /\b(?:mykonos|korfos|ftelia)\b/i, name: 'Mykonos (Korfos)', defaultCity: 'Mykonos', defaultState: 'Cyclades', defaultCountry: 'Greece' },
+  { pattern: /\b(?:santorini|monolithos)\b/i, name: 'Santorini (Monolithos)', defaultCity: 'Santorini', defaultState: 'Cyclades', defaultCountry: 'Greece' },
+
+  // Dodecanese
+  { pattern: /\b(?:prasonisi|prassonissi)\b/i, name: 'Rhodes (Prasonisi)', defaultCity: 'Rhodes', defaultState: 'Dodecanese', defaultCountry: 'Greece' },
+  { pattern: /\b(?:theologos|kremasti|ialyssos)\b/i, name: 'Rhodes (Theologos)', defaultCity: 'Rhodes', defaultState: 'Dodecanese', defaultCountry: 'Greece' },
+  { pattern: /\brhodes\b/i, name: 'Rhodes', defaultCity: 'Rhodes', defaultState: 'Dodecanese', defaultCountry: 'Greece' },
+  { pattern: /\b(?:marmari\s+kos|mastichari|kohilari)\b/i, name: 'Kos (Marmari & Kohilari)', defaultCity: 'Kos', defaultState: 'Dodecanese', defaultCountry: 'Greece' },
+  { pattern: /\bkos\b/i, name: 'Kos', defaultCity: 'Kos', defaultState: 'Dodecanese', defaultCountry: 'Greece' },
+  { pattern: /\b(?:karpathos|afiartis)\b/i, name: 'Karpathos (Afiartis)', defaultCity: 'Karpathos', defaultState: 'Dodecanese', defaultCountry: 'Greece' },
+
+  // Ionian Islands
+  { pattern: /\b(?:lefkada|agios\s+ioannis|milos\s+beach|vassiliki)\b/i, name: 'Lefkada (Agios Ioannis)', defaultCity: 'Lefkada', defaultState: 'Ionian Islands', defaultCountry: 'Greece' },
+  { pattern: /\b(?:corfu|kerkyra|chalikounas|issos)\b/i, name: 'Corfu (Chalikounas)', defaultCity: 'Corfu', defaultState: 'Ionian Islands', defaultCountry: 'Greece' },
+
+  // Crete
+  { pattern: /\b(?:elafonisi|falassarna)\b/i, name: 'Crete (Elafonisi)', defaultCity: 'Chania', defaultState: 'Crete', defaultCountry: 'Greece' },
+  { pattern: /\b(?:kouremenos|palekastro)\b/i, name: 'Crete (Palekastro)', defaultCity: 'Sitia', defaultState: 'Crete', defaultCountry: 'Greece' },
+  { pattern: /\b(?:ammoudara|heraklion)\b/i, name: 'Crete (Heraklion)', defaultCity: 'Heraklion', defaultState: 'Crete', defaultCountry: 'Greece' },
+
+  // North Aegean & Evia
+  { pattern: /\b(?:limnos|lemnos|keros)\b/i, name: 'Limnos (Keros)', defaultCity: 'Limnos', defaultState: 'North Aegean', defaultCountry: 'Greece' },
+  { pattern: /\b(?:evia|lefkandi|marmari\s+evia)\b/i, name: 'Evia (Lefkandi)', defaultCity: 'Chalkida', defaultState: 'Central Greece', defaultCountry: 'Greece' },
+
+  // Mainland / Peloponnese / Attica
+  { pattern: /\b(?:drepano|cape\s+drepano|patras)\b/i, name: 'Cape Drepano (Patras)', defaultCity: 'Patras', defaultState: 'Western Greece', defaultCountry: 'Greece' },
+  { pattern: /\b(?:loutsa|artemida)\b/i, name: 'Athens (Loutsa)', defaultCity: 'Artemida', defaultState: 'Attica', defaultCountry: 'Greece' },
+  { pattern: /\b(?:schinias|marathon)\b/i, name: 'Athens (Schinias)', defaultCity: 'Marathon', defaultState: 'Attica', defaultCountry: 'Greece' },
+  { pattern: /\banavyssos\b/i, name: 'Athens (Anavyssos)', defaultCity: 'Anavyssos', defaultState: 'Attica', defaultCountry: 'Greece' },
 ]
 
-function detectBeachAndCity ( candidateTexts: string[] ): { beach: string | null; city: string | null; state: string } {
+function detectBeachAndCity ( candidateTexts: string[] ): { beach: string | null; city: string | null; state: string; country: string } {
   const combined = candidateTexts.filter( Boolean ).join( ' ' )
   for ( const spot of KNOWN_SPOTS ) {
     if ( spot.pattern.test( combined ) ) {
@@ -105,10 +141,11 @@ function detectBeachAndCity ( candidateTexts: string[] ): { beach: string | null
         beach: spot.name,
         city: spot.defaultCity || null,
         state: spot.defaultState || 'CE',
+        country: spot.defaultCountry || 'Brazil',
       }
     }
   }
-  return { beach: null, city: null, state: 'CE' }
+  return { beach: null, city: null, state: 'CE', country: 'Brazil' }
 }
 
 function extractInstagram ( ...candidates: unknown[] ): string | null {
@@ -157,7 +194,7 @@ function normaliseKiteSupplier ( item: Record<string, unknown> ) {
     beach,
     city,
     state: text( item.state, item.State ) || detected.state || 'CE',
-    country: text( item.country, item.Country ) || 'Brazil',
+    country: text( item.country, item.Country ) || detected.country || 'Brazil',
     category,
     phone,
     email,

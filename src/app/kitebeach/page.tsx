@@ -75,10 +75,17 @@ function KiteBeachPageContent () {
       cell: ( item ) => (
         item.beach ? (
           <div className="flex flex-col gap-0.5">
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20 w-fit">
-              <span>🏖️</span>
-              <span>{ item.beach }</span>
-            </span>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20 w-fit">
+                <span>{ item.country === 'Greece' ? '🇬🇷' : '🇧🇷' }</span>
+                <span>{ item.beach }</span>
+              </span>
+              { item.state && (
+                <span className="text-[10px] px-1 py-0.2 rounded bg-muted text-muted-foreground font-mono">
+                  { item.state }
+                </span>
+              ) }
+            </div>
             { item.city && item.city.toLowerCase() !== item.beach.toLowerCase() && (
               <span className="text-[11px] text-muted-foreground ml-1">
                 { item.city }
@@ -185,7 +192,7 @@ function KiteBeachPageContent () {
   return (
     <DirectoryView<KiteBeachSupplier>
       title="Kite Beach Directory"
-      subtitle="Kite schools, downwinder operators, equipment rentals, and beach clubs in Ceará (Cumbuco, Taíba, Paracuru, Jeri, Preá)"
+      subtitle="Kite schools, downwinder operators, equipment rentals, and beach accommodations across Brazil & Greece"
       activeNav="kitebeach"
       apiEndpoint="/api/kitebeach"
       itemsKey="suppliers"
