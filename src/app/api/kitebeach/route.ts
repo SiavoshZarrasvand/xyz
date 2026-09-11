@@ -39,35 +39,76 @@ function numeric ( value: unknown, parse: ( raw: string ) => number ): number | 
   return Number.isFinite( parsed ) ? parsed : null
 }
 
-// Known kite spots and beaches in Ceará & Nordeste
-const KNOWN_SPOTS: { pattern: RegExp; name: string; defaultCity?: string }[] = [
-  { pattern: /\bcumbuco\b/i, name: 'Cumbuco', defaultCity: 'Caucaia' },
-  { pattern: /\bta[ií]ba\b/i, name: 'Taíba', defaultCity: 'São Gonçalo do Amarante' },
-  { pattern: /\bparacuru\b/i, name: 'Paracuru', defaultCity: 'Paracuru' },
-  { pattern: /\b(?:ilha\s+do\s+guajir[uú]|ilhadoguajiru)\b/i, name: 'Ilha do Guajirú', defaultCity: 'Itarema' },
-  { pattern: /\bpre[aá]\b/i, name: 'Preá', defaultCity: 'Cruz' },
-  { pattern: /\b(?:jericoacoara|jeri)\b/i, name: 'Jericoacoara', defaultCity: 'Jijoca de Jericoacoara' },
-  { pattern: /\b(?:icara[ií]zinho|icara[ií]\s+de\s+amontada)\b/i, name: 'Icaraizinho', defaultCity: 'Amontada' },
-  { pattern: /\bguajir[uú]\b/i, name: 'Guajirú', defaultCity: 'Trairi' },
-  { pattern: /\bflecheiras\b/i, name: 'Flecheiras', defaultCity: 'Trairi' },
-  { pattern: /\blagoinha\b/i, name: 'Lagoinha', defaultCity: 'Paraipaba' },
-  { pattern: /\bbarra\s+nova\b/i, name: 'Barra Nova', defaultCity: 'Cascavel' },
-  { pattern: /\burua[uú]\b/i, name: 'Uruaú', defaultCity: 'Beberibe' },
-  { pattern: /\btatajuba\b/i, name: 'Tatajuba', defaultCity: 'Camocim' },
-  { pattern: /\bcamocim\b/i, name: 'Camocim', defaultCity: 'Camocim' },
-  { pattern: /\bfortaleza\b/i, name: 'Fortaleza', defaultCity: 'Fortaleza' },
-  { pattern: /\bbarra\s+grande\b/i, name: 'Barra Grande', defaultCity: 'Cajueiro da Praia' },
-  { pattern: /\bmacap[aá]\b/i, name: 'Macapá', defaultCity: 'Luís Correia' },
+interface SpotDef {
+  pattern: RegExp
+  name: string
+  defaultCity?: string
+  defaultState?: string
+}
+
+// Complete Brazil Kite Corridor destinations: Maranhão, Piauí, Ceará, and Rio Grande do Norte
+const KNOWN_SPOTS: SpotDef[] = [
+  // Ceará — Northwest Corridor
+  { pattern: /\bcumbuco\b/i, name: 'Cumbuco', defaultCity: 'Caucaia', defaultState: 'CE' },
+  { pattern: /\bcau[ií]pe\b/i, name: 'Cumbuco', defaultCity: 'Caucaia', defaultState: 'CE' },
+  { pattern: /\bta[ií]ba\b/i, name: 'Taíba', defaultCity: 'São Gonçalo do Amarante', defaultState: 'CE' },
+  { pattern: /\bparacuru\b/i, name: 'Paracuru', defaultCity: 'Paracuru', defaultState: 'CE' },
+  { pattern: /\blagoinha\b/i, name: 'Lagoinha', defaultCity: 'Paraipaba', defaultState: 'CE' },
+  { pattern: /\bguajir[uú]\b/i, name: 'Guajirú', defaultCity: 'Trairi', defaultState: 'CE' },
+  { pattern: /\bflecheiras\b/i, name: 'Flecheiras', defaultCity: 'Trairi', defaultState: 'CE' },
+  { pattern: /\bbaleia\b/i, name: 'Baleia', defaultCity: 'Itapipoca', defaultState: 'CE' },
+  { pattern: /\b(?:icara[ií]zinho|icara[ií]\s+de\s+amontada)\b/i, name: 'Icaraizinho', defaultCity: 'Amontada', defaultState: 'CE' },
+  { pattern: /\b(?:ilha\s+do\s+guajir[uú]|ilhadoguajiru)\b/i, name: 'Ilha do Guajirú', defaultCity: 'Itarema', defaultState: 'CE' },
+  { pattern: /\bpre[aá]\b/i, name: 'Preá', defaultCity: 'Cruz', defaultState: 'CE' },
+  { pattern: /\bbarrinha(?:\s+de\s+baixo)?\b/i, name: 'Barrinha', defaultCity: 'Acaraú', defaultState: 'CE' },
+  { pattern: /\bacara[uú]\b/i, name: 'Acaraú', defaultCity: 'Acaraú', defaultState: 'CE' },
+  { pattern: /\b(?:jericoacoara|jeri)\b/i, name: 'Jericoacoara', defaultCity: 'Jijoca de Jericoacoara', defaultState: 'CE' },
+  { pattern: /\bguri[uú]\b/i, name: 'Guriú', defaultCity: 'Camocim', defaultState: 'CE' },
+  { pattern: /\btatajuba\b/i, name: 'Tatajuba', defaultCity: 'Camocim', defaultState: 'CE' },
+  { pattern: /\bcamocim\b/i, name: 'Camocim', defaultCity: 'Camocim', defaultState: 'CE' },
+
+  // Ceará — Southeast / South Corridor (towards RN)
+  { pattern: /\bporto\s+das\s+dunas\b/i, name: 'Porto das Dunas', defaultCity: 'Aquiraz', defaultState: 'CE' },
+  { pattern: /\b(?:aquiraz|lagoa\s+do\s+catu)\b/i, name: 'Aquiraz', defaultCity: 'Aquiraz', defaultState: 'CE' },
+  { pattern: /\biguape\b/i, name: 'Iguape', defaultCity: 'Aquiraz', defaultState: 'CE' },
+  { pattern: /\bbarra\s+nova\b/i, name: 'Barra Nova', defaultCity: 'Cascavel', defaultState: 'CE' },
+  { pattern: /\burua[uú]\b/i, name: 'Uruaú', defaultCity: 'Beberibe', defaultState: 'CE' },
+  { pattern: /\bparajuru\b/i, name: 'Parajuru', defaultCity: 'Beberibe', defaultState: 'CE' },
+  { pattern: /\bpontal\s+de\s+macei[oó]\b/i, name: 'Pontal de Maceió', defaultCity: 'Fortim', defaultState: 'CE' },
+  { pattern: /\bfortim\b/i, name: 'Fortim', defaultCity: 'Fortim', defaultState: 'CE' },
+  { pattern: /\bcanoa\s+quebrada\b/i, name: 'Canoa Quebrada', defaultCity: 'Aracati', defaultState: 'CE' },
+  { pattern: /\bmajorl[aâ]ndia\b/i, name: 'Majorlândia', defaultCity: 'Aracati', defaultState: 'CE' },
+  { pattern: /\bquixaba\b/i, name: 'Quixaba', defaultCity: 'Aracati', defaultState: 'CE' },
+  { pattern: /\b(?:icapu[ií]|redonda|peroba|ponta\s+grossa)\b/i, name: 'Icapuí', defaultCity: 'Icapuí', defaultState: 'CE' },
+  { pattern: /\bfortaleza\b/i, name: 'Fortaleza', defaultCity: 'Fortaleza', defaultState: 'CE' },
+
+  // Piauí (PI)
+  { pattern: /\bbarra\s+grande\b/i, name: 'Barra Grande', defaultCity: 'Cajueiro da Praia', defaultState: 'PI' },
+  { pattern: /\bmacap[aá]\b/i, name: 'Macapá', defaultCity: 'Luís Correia', defaultState: 'PI' },
+
+  // Maranhão (MA) — Lençóis Maranhenses Kite Lagoons
+  { pattern: /\batins\b/i, name: 'Atins', defaultCity: 'Barreirinhas', defaultState: 'MA' },
+  { pattern: /\bbarreirinhas\b/i, name: 'Barreirinhas', defaultCity: 'Barreirinhas', defaultState: 'MA' },
+
+  // Rio Grande do Norte (RN) — Kite Coast
+  { pattern: /\btibau\b/i, name: 'Tibau', defaultCity: 'Tibau', defaultState: 'RN' },
+  { pattern: /\b(?:galinhos|galos)\b/i, name: 'Galinhos', defaultCity: 'Galinhos', defaultState: 'RN' },
+  { pattern: /\b(?:s[aã]o\s+miguel\s+do\s+gostoso|gostoso)\b/i, name: 'São Miguel do Gostoso', defaultCity: 'São Miguel do Gostoso', defaultState: 'RN' },
+  { pattern: /\btouros\b/i, name: 'Touros', defaultCity: 'Touros', defaultState: 'RN' },
 ]
 
-function detectBeachAndCity ( candidateTexts: string[] ): { beach: string | null; city: string | null } {
+function detectBeachAndCity ( candidateTexts: string[] ): { beach: string | null; city: string | null; state: string } {
   const combined = candidateTexts.filter( Boolean ).join( ' ' )
   for ( const spot of KNOWN_SPOTS ) {
     if ( spot.pattern.test( combined ) ) {
-      return { beach: spot.name, city: spot.defaultCity || null }
+      return {
+        beach: spot.name,
+        city: spot.defaultCity || null,
+        state: spot.defaultState || 'CE',
+      }
     }
   }
-  return { beach: null, city: null }
+  return { beach: null, city: null, state: 'CE' }
 }
 
 function extractInstagram ( ...candidates: unknown[] ): string | null {
@@ -115,7 +156,7 @@ function normaliseKiteSupplier ( item: Record<string, unknown> ) {
     name,
     beach,
     city,
-    state: text( item.state, item.State ) || 'CE',
+    state: text( item.state, item.State ) || detected.state || 'CE',
     country: text( item.country, item.Country ) || 'Brazil',
     category,
     phone,
