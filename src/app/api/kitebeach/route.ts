@@ -310,9 +310,14 @@ export async function GET ( request: NextRequest ) {
     const websiteFilter = searchParams.get( 'website' )
     const categoryFilter = searchParams.get( 'category' )
     const addressFilter = searchParams.get( 'address' )
+    const countryFilter = searchParams.get( 'country' )
 
     const skip = ( page - 1 ) * limit
     const where: Prisma.KiteBeachSupplierWhereInput = {}
+
+    if ( countryFilter && countryFilter !== 'all' ) {
+      where.country = countryFilter
+    }
 
     if ( contactedFilter === 'true' ) {
       where.contacted = true
