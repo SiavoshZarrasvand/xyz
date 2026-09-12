@@ -429,10 +429,20 @@ function normaliseKiteSupplier ( item: Record<string, unknown> ) {
     instagram,
     address,
     rating: ( () => {
+      const rawStr = item.rating !== null && item.rating !== undefined ? String( item.rating ).trim() : ''
       let r = numeric( item.rating, parseFloat )
       if ( r !== null && r > 5.0 ) {
-        const m = String( r ).match( /([1-5]\.\d)$/ )
-        if ( m ) r = parseFloat( m[ 1 ] )
+        const decimalMatch = rawStr.match( /([1-5]\.\d)$/ )
+        if ( decimalMatch ) {
+          r = parseFloat( decimalMatch[ 1 ] )
+        } else {
+          const intMatch = String( r ).match( /([1-5])$/ )
+          if ( intMatch ) {
+            r = parseFloat( intMatch[ 1 ] )
+          } else {
+            r = 5.0
+          }
+        }
       }
       return r
     } )(),
