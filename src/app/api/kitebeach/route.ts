@@ -742,6 +742,11 @@ export async function POST ( request: NextRequest ) {
             where: { id: match.id },
             data: {
               ...supplier,
+              phone: supplier.phone || match.phone,
+              website: supplier.website || match.website,
+              email: supplier.email || match.email,
+              address: supplier.address || match.address,
+              hours: supplier.hours || match.hours,
               contacted: match.contacted || false,
               notes: match.notes || supplier.notes,
             },
