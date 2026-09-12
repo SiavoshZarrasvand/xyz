@@ -794,7 +794,7 @@ export async function POST ( request: NextRequest ) {
 export async function PUT ( request: NextRequest ) {
   try {
     const body = await request.json()
-    const { id, contacted, notes, phone, email, website, instagram, beach, destination, spot, category } = body
+    const { id, contacted, notes, phone, email, website, instagram, beach, destination, spot, category, address, hours } = body
 
     if ( !id ) {
       return NextResponse.json(
@@ -819,6 +819,8 @@ export async function PUT ( request: NextRequest ) {
     if ( destination !== undefined ) updateData.destination = destination ? String( destination ) : null
     if ( spot !== undefined ) updateData.spot = spot ? String( spot ) : null
     if ( category !== undefined ) updateData.category = category ? String( category ) : null
+    if ( address !== undefined ) updateData.address = address ? String( address ) : null
+    if ( hours !== undefined ) updateData.hours = hours ? String( hours ) : null
 
     const updated = await prisma.kiteBeachSupplier.update( {
       where: { id },
