@@ -183,6 +183,7 @@ const KNOWN_SPOTS: SpotDef[] = [
   { pattern: /\bdahab\b/i, name: 'Dahab', defaultCity: 'Dahab', defaultState: 'South Sinai', defaultCountry: 'Egypt' },
   { pattern: /\bras\s+sudr\b/i, name: 'Ras Sudr', defaultCity: 'Ras Sudr', defaultState: 'South Sinai', defaultCountry: 'Egypt' },
   { pattern: /\bhurghada\b/i, name: 'Hurghada', defaultCity: 'Hurghada', defaultState: 'Red Sea', defaultCountry: 'Egypt' },
+  { pattern: /\bmarsa\s+alam\b/i, name: 'Marsa Alam', defaultCity: 'Marsa Alam', defaultState: 'Red Sea', defaultCountry: 'Egypt' },
 
   // ==========================================
   // South Africa — Cape of Storms & Lagoons
@@ -199,14 +200,14 @@ const KNOWN_SPOTS: SpotDef[] = [
   { pattern: /\b(?:boracay|bulabog)\b/i, name: 'Boracay (Bulabog Beach)', defaultCity: 'Malay', defaultState: 'Aklan', defaultCountry: 'Philippines' },
   { pattern: /\b(?:hua\s+hin|pranburi)\b/i, name: 'Hua Hin & Pranburi', defaultCity: 'Hua Hin', defaultState: 'Prachuap Khiri Khan', defaultCountry: 'Thailand' },
   { pattern: /\bkoh\s+phangan\b/i, name: 'Koh Phangan', defaultCity: 'Koh Phangan', defaultState: 'Surat Thani', defaultCountry: 'Thailand' },
-  { pattern: /\bkalpitiya\b/i, name: 'Kalpitiya Lagoon', defaultCity: 'Kalpitiya', defaultState: 'North Western Province', defaultCountry: 'Sri Lanka' },
+  { pattern: /\b(?:kalpitiya|kappalady)\b/i, name: 'Kalpitiya Lagoon', defaultCity: 'Kalpitiya', defaultState: 'North Western Province', defaultCountry: 'Sri Lanka' },
 
   // ==========================================
   // South America Gems (Peru & Venezuela)
   // ==========================================
   { pattern: /\bpacasmayo\b/i, name: 'Pacasmayo', defaultCity: 'Pacasmayo', defaultState: 'La Libertad', defaultCountry: 'Peru' },
   { pattern: /\bparacas\b/i, name: 'Paracas Bay', defaultCity: 'Paracas', defaultState: 'Ica', defaultCountry: 'Peru' },
-  { pattern: /\bm[aá]ncora\b/i, name: 'Máncora', defaultCity: 'Máncora', defaultState: 'Piura', defaultCountry: 'Peru' },
+  { pattern: /\b(?:m[aá]ncora|lobitos)\b/i, name: 'Máncora & Lobitos', defaultCity: 'Máncora', defaultState: 'Piura', defaultCountry: 'Peru' },
   { pattern: /\b(?:el\s+yaque|margarita)\b/i, name: 'El Yaque (Isla Margarita)', defaultCity: 'El Yaque', defaultState: 'Nueva Esparta', defaultCountry: 'Venezuela' },
   { pattern: /\blos\s+roques\b/i, name: 'Los Roques', defaultCity: 'Gran Roque', defaultState: 'Federal Dependencies', defaultCountry: 'Venezuela' },
   { pattern: /\bad[ií]cora\b/i, name: 'Adícora (Paraguaná)', defaultCity: 'Adícora', defaultState: 'Falcón', defaultCountry: 'Venezuela' },
