@@ -145,6 +145,10 @@ const KNOWN_SPOTS: SpotDef[] = [
   { pattern: /\b(?:sant\s+pere\s+pescador|empuriabrava|roses|costa\s+brava)\b/i, name: 'Costa Brava (Sant Pere Pescador)', defaultCity: 'Sant Pere Pescador', defaultState: 'Catalonia', defaultCountry: 'Spain' },
   { pattern: /\b(?:mar\s+menor|la\s+manga|los\s+alc[aá]zares)\b/i, name: 'Mar Menor (La Manga)', defaultCity: 'San Javier', defaultState: 'Murcia', defaultCountry: 'Spain' },
   { pattern: /\b(?:pollen[cç]a|alcudia|sa\s+marina|mallorca)\b/i, name: 'Mallorca (Pollença)', defaultCity: 'Pollença', defaultState: 'Balearic Islands', defaultCountry: 'Spain' },
+  { pattern: /\b(?:ibiza|eivissa|cala\s+martina)\b/i, name: 'Ibiza (Cala Martina)', defaultCity: 'Santa Eulària', defaultState: 'Balearic Islands', defaultCountry: 'Spain' },
+  { pattern: /\b(?:menorca|fornells|son\s+bou)\b/i, name: 'Menorca (Fornells)', defaultCity: 'Es Mercadal', defaultState: 'Balearic Islands', defaultCountry: 'Spain' },
+  { pattern: /\bformentera\b/i, name: 'Formentera', defaultCity: 'Sant Francesc Xavier', defaultState: 'Balearic Islands', defaultCountry: 'Spain' },
+  { pattern: /\bla\s+palma\b/i, name: 'La Palma', defaultCity: 'Santa Cruz de La Palma', defaultState: 'Canary Islands', defaultCountry: 'Spain' },
   { pattern: /\b(?:denia|oliva)\b/i, name: 'Denia & Oliva', defaultCity: 'Denia', defaultState: 'Valencia', defaultCountry: 'Spain' },
 
   // ==========================================
