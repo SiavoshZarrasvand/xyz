@@ -483,7 +483,7 @@ export async function GET ( request: NextRequest ) {
     const where: Prisma.KiteBeachSupplierWhereInput = {}
 
     if ( countryFilter && countryFilter !== 'all' ) {
-      where.country = countryFilter
+      where.country = { contains: countryFilter }
     }
 
     if ( contactedFilter === 'true' ) {
@@ -493,17 +493,17 @@ export async function GET ( request: NextRequest ) {
     }
 
     if ( destinationFilter && destinationFilter !== 'all' ) {
-      where.destination = destinationFilter
+      where.destination = { contains: destinationFilter }
     }
 
     if ( spotFilter && spotFilter !== 'all' ) {
-      where.spot = spotFilter
+      where.spot = { contains: spotFilter }
     }
 
     if ( beachFilter === '__untagged__' ) {
       where.beach = null
     } else if ( beachFilter && beachFilter !== 'all' ) {
-      where.beach = beachFilter
+      where.beach = { contains: beachFilter }
     }
 
     if ( hasEmail === 'true' ) {
