@@ -428,7 +428,14 @@ function normaliseKiteSupplier ( item: Record<string, unknown> ) {
     website,
     instagram,
     address,
-    rating: numeric( item.rating, parseFloat ),
+    rating: ( () => {
+      let r = numeric( item.rating, parseFloat )
+      if ( r !== null && r > 5.0 ) {
+        const m = String( r ).match( /([1-5]\.\d)$/ )
+        if ( m ) r = parseFloat( m[ 1 ] )
+      }
+      return r
+    } )(),
     reviews: numeric( item.reviews, raw => parseInt( raw, 10 ) ),
     googleMapsUrl,
     hours,
