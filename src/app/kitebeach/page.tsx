@@ -31,6 +31,22 @@ interface KiteBeachSupplier {
   createdAt: string
 }
 
+const COUNTRY_FLAGS: Record<string, string> = {
+  Brazil: '🇧🇷',
+  Greece: '🇬🇷',
+  Spain: '🇪🇸',
+  France: '🇫🇷',
+  Italy: '🇮🇹',
+  Egypt: '🇪🇬',
+  'South Africa': '🇿🇦',
+  Vietnam: '🇻🇳',
+  Philippines: '🇵🇭',
+  Thailand: '🇹🇭',
+  'Sri Lanka': '🇱🇰',
+  Peru: '🇵🇪',
+  Venezuela: '🇻🇪',
+}
+
 function KiteBeachPageContent () {
   const columns: ColumnDef<KiteBeachSupplier>[] = useMemo( () => [
     {
@@ -69,6 +85,17 @@ function KiteBeachPageContent () {
       ),
     },
     {
+      id: 'country',
+      header: 'Country',
+      filter: { type: 'text', placeholder: 'Filter country...' },
+      cell: ( item ) => (
+        <div className="flex items-center gap-1.5 text-xs font-medium">
+          <span className="text-base">{ ( item.country && COUNTRY_FLAGS[ item.country ] ) || '🌐' }</span>
+          <span>{ item.country || '-' }</span>
+        </div>
+      ),
+    },
+    {
       id: 'beach',
       header: 'Beach / Spot',
       filter: { type: 'text', placeholder: 'Filter beach...' },
@@ -77,7 +104,7 @@ function KiteBeachPageContent () {
           <div className="flex flex-col gap-0.5">
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20 w-fit">
-                <span>{ item.country === 'Greece' ? '🇬🇷' : '🇧🇷' }</span>
+                <span>{ ( item.country && COUNTRY_FLAGS[ item.country ] ) || '🏖️' }</span>
                 <span>{ item.beach }</span>
               </span>
               { item.state && (

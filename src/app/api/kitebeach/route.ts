@@ -131,6 +131,81 @@ const KNOWN_SPOTS: SpotDef[] = [
   { pattern: /\b(?:loutsa|artemida)\b/i, name: 'Athens (Loutsa)', defaultCity: 'Artemida', defaultState: 'Attica', defaultCountry: 'Greece' },
   { pattern: /\b(?:schinias|marathon)\b/i, name: 'Athens (Schinias)', defaultCity: 'Marathon', defaultState: 'Attica', defaultCountry: 'Greece' },
   { pattern: /\banavyssos\b/i, name: 'Athens (Anavyssos)', defaultCity: 'Anavyssos', defaultState: 'Attica', defaultCountry: 'Greece' },
+
+  // ==========================================
+  // Spain — Premier Kite Hubs (Tarifa, Canaries, Med)
+  // ==========================================
+  { pattern: /\b(?:valdevaqueros|punta\s+paloma)\b/i, name: 'Tarifa (Valdevaqueros)', defaultCity: 'Tarifa', defaultState: 'Andalusia', defaultCountry: 'Spain' },
+  { pattern: /\blos\s+lances\b/i, name: 'Tarifa (Los Lances)', defaultCity: 'Tarifa', defaultState: 'Andalusia', defaultCountry: 'Spain' },
+  { pattern: /\btarifa\b/i, name: 'Tarifa', defaultCity: 'Tarifa', defaultState: 'Andalusia', defaultCountry: 'Spain' },
+  { pattern: /\b(?:fuerteventura|sotavento|corralejo|flag\s+beach)\b/i, name: 'Fuerteventura (Sotavento)', defaultCity: 'Pájara / Corralejo', defaultState: 'Canary Islands', defaultCountry: 'Spain' },
+  { pattern: /\b(?:el\s+m[eé]dano|medano|tenerife)\b/i, name: 'Tenerife (El Médano)', defaultCity: 'Granadilla de Abona', defaultState: 'Canary Islands', defaultCountry: 'Spain' },
+  { pattern: /\b(?:famara|lanzarote)\b/i, name: 'Lanzarote (Famara)', defaultCity: 'Teguise', defaultState: 'Canary Islands', defaultCountry: 'Spain' },
+  { pattern: /\b(?:pozo\s+izquierdo|gran\s+canaria|vargas)\b/i, name: 'Gran Canaria (Pozo Izquierdo)', defaultCity: 'Santa Lucía', defaultState: 'Canary Islands', defaultCountry: 'Spain' },
+  { pattern: /\b(?:sant\s+pere\s+pescador|empuriabrava|roses|costa\s+brava)\b/i, name: 'Costa Brava (Sant Pere Pescador)', defaultCity: 'Sant Pere Pescador', defaultState: 'Catalonia', defaultCountry: 'Spain' },
+  { pattern: /\b(?:mar\s+menor|la\s+manga|los\s+alc[aá]zares)\b/i, name: 'Mar Menor (La Manga)', defaultCity: 'San Javier', defaultState: 'Murcia', defaultCountry: 'Spain' },
+  { pattern: /\b(?:pollen[cç]a|alcudia|sa\s+marina|mallorca)\b/i, name: 'Mallorca (Pollença)', defaultCity: 'Pollença', defaultState: 'Balearic Islands', defaultCountry: 'Spain' },
+  { pattern: /\b(?:denia|oliva)\b/i, name: 'Denia & Oliva', defaultCity: 'Denia', defaultState: 'Valencia', defaultCountry: 'Spain' },
+
+  // ==========================================
+  // France — Tramontane, Mistral & Atlantic
+  // ==========================================
+  { pattern: /\b(?:leucate|la\s+franqui)\b/i, name: 'Leucate (La Franqui)', defaultCity: 'Leucate', defaultState: 'Occitanie', defaultCountry: 'France' },
+  { pattern: /\b(?:hy[eè]res|almanarre)\b/i, name: 'Hyères (Almanarre)', defaultCity: 'Hyères', defaultState: 'Provence', defaultCountry: 'France' },
+  { pattern: /\b(?:beauduc|camargue)\b/i, name: 'Beauduc (Camargue)', defaultCity: 'Arles', defaultState: 'Provence', defaultCountry: 'France' },
+  { pattern: /\b(?:gruissan|saint[- ]cyprien)\b/i, name: 'Gruissan & Saint-Cyprien', defaultCity: 'Gruissan', defaultState: 'Occitanie', defaultCountry: 'France' },
+  { pattern: /\b(?:quiberon|carnac|presqu['’]île\s+de\s+quiberon)\b/i, name: 'Quiberon (Brittany)', defaultCity: 'Quiberon', defaultState: 'Brittany', defaultCountry: 'France' },
+  { pattern: /\b(?:arcachon|biscarrosse|dune\s+du\s+pilat)\b/i, name: 'Arcachon & Biscarrosse', defaultCity: 'Biscarrosse', defaultState: 'Nouvelle-Aquitaine', defaultCountry: 'France' },
+  { pattern: /\bla\s+tranche[- ]sur[- ]mer\b/i, name: 'La Tranche-sur-Mer', defaultCity: 'La Tranche-sur-Mer', defaultState: 'Pays de la Loire', defaultCountry: 'France' },
+
+  // ==========================================
+  // Italy — Sicily, Sardinia, Calabria & Lakes
+  // ==========================================
+  { pattern: /\b(?:lo\s+stagnone|stagnone|marsala)\b/i, name: 'Sicily (Lo Stagnone)', defaultCity: 'Marsala', defaultState: 'Sicily', defaultCountry: 'Italy' },
+  { pattern: /\b(?:puzziteddu|capo\s+granitola)\b/i, name: 'Sicily (Puzziteddu)', defaultCity: 'Campobello di Mazara', defaultState: 'Sicily', defaultCountry: 'Italy' },
+  { pattern: /\bporto\s+pollo\b/i, name: 'Sardinia (Porto Pollo)', defaultCity: 'Palau', defaultState: 'Sardinia', defaultCountry: 'Italy' },
+  { pattern: /\bpunta\s+trettu\b/i, name: 'Sardinia (Punta Trettu)', defaultCity: 'San Giovanni Suergiu', defaultState: 'Sardinia', defaultCountry: 'Italy' },
+  { pattern: /\b(?:chia|porto\s+pino)\b/i, name: 'Sardinia (Chia)', defaultCity: 'Domus de Maria', defaultState: 'Sardinia', defaultCountry: 'Italy' },
+  { pattern: /\b(?:gizzeria|hang\s+loose\s+beach)\b/i, name: 'Calabria (Gizzeria Lido)', defaultCity: 'Gizzeria', defaultState: 'Calabria', defaultCountry: 'Italy' },
+  { pattern: /\b(?:garda|malcesine|navene|campione)\b/i, name: 'Lake Garda', defaultCity: 'Malcesine', defaultState: 'Veneto / Lombardy', defaultCountry: 'Italy' },
+  { pattern: /\b(?:como|colico|dervio|valmadrera)\b/i, name: 'Lake Como', defaultCity: 'Colico', defaultState: 'Lombardy', defaultCountry: 'Italy' },
+  { pattern: /\b(?:punta\s+prosciutto|torre\s+san\s+giovanni|salento)\b/i, name: 'Puglia (Salento)', defaultCity: 'Porto Cesareo', defaultState: 'Puglia', defaultCountry: 'Italy' },
+
+  // ==========================================
+  // Egypt — Red Sea Flat-Water Meccas
+  // ==========================================
+  { pattern: /\b(?:el\s+gouna|gouna)\b/i, name: 'El Gouna', defaultCity: 'El Gouna', defaultState: 'Red Sea', defaultCountry: 'Egypt' },
+  { pattern: /\bsoma\s+bay\b/i, name: 'Soma Bay', defaultCity: 'Safaga', defaultState: 'Red Sea', defaultCountry: 'Egypt' },
+  { pattern: /\bdahab\b/i, name: 'Dahab', defaultCity: 'Dahab', defaultState: 'South Sinai', defaultCountry: 'Egypt' },
+  { pattern: /\bras\s+sudr\b/i, name: 'Ras Sudr', defaultCity: 'Ras Sudr', defaultState: 'South Sinai', defaultCountry: 'Egypt' },
+  { pattern: /\bhurghada\b/i, name: 'Hurghada', defaultCity: 'Hurghada', defaultState: 'Red Sea', defaultCountry: 'Egypt' },
+
+  // ==========================================
+  // South Africa — Cape of Storms & Lagoons
+  // ==========================================
+  { pattern: /\b(?:bloubergstrand|blouberg|big\s+bay|delfin\s+beach|sunset\s+beach|cape\s+town)\b/i, name: 'Cape Town (Bloubergstrand)', defaultCity: 'Cape Town', defaultState: 'Western Cape', defaultCountry: 'South Africa' },
+  { pattern: /\blangebaan\b/i, name: 'Langebaan Lagoon', defaultCity: 'Langebaan', defaultState: 'Western Cape', defaultCountry: 'South Africa' },
+  { pattern: /\bmuizenberg\b/i, name: 'Muizenberg', defaultCity: 'Cape Town', defaultState: 'Western Cape', defaultCountry: 'South Africa' },
+
+  // ==========================================
+  // Southeast Asia (Vietnam, Philippines, Thailand, Sri Lanka)
+  // ==========================================
+  { pattern: /\bmui\s+ne\b/i, name: 'Mui Ne', defaultCity: 'Phan Thiet', defaultState: 'Bình Thuận', defaultCountry: 'Vietnam' },
+  { pattern: /\bphan\s+rang\b/i, name: 'Phan Rang', defaultCity: 'Phan Rang', defaultState: 'Ninh Thuận', defaultCountry: 'Vietnam' },
+  { pattern: /\b(?:boracay|bulabog)\b/i, name: 'Boracay (Bulabog Beach)', defaultCity: 'Malay', defaultState: 'Aklan', defaultCountry: 'Philippines' },
+  { pattern: /\b(?:hua\s+hin|pranburi)\b/i, name: 'Hua Hin & Pranburi', defaultCity: 'Hua Hin', defaultState: 'Prachuap Khiri Khan', defaultCountry: 'Thailand' },
+  { pattern: /\bkoh\s+phangan\b/i, name: 'Koh Phangan', defaultCity: 'Koh Phangan', defaultState: 'Surat Thani', defaultCountry: 'Thailand' },
+  { pattern: /\bkalpitiya\b/i, name: 'Kalpitiya Lagoon', defaultCity: 'Kalpitiya', defaultState: 'North Western Province', defaultCountry: 'Sri Lanka' },
+
+  // ==========================================
+  // South America Gems (Peru & Venezuela)
+  // ==========================================
+  { pattern: /\bpacasmayo\b/i, name: 'Pacasmayo', defaultCity: 'Pacasmayo', defaultState: 'La Libertad', defaultCountry: 'Peru' },
+  { pattern: /\bparacas\b/i, name: 'Paracas Bay', defaultCity: 'Paracas', defaultState: 'Ica', defaultCountry: 'Peru' },
+  { pattern: /\bm[aá]ncora\b/i, name: 'Máncora', defaultCity: 'Máncora', defaultState: 'Piura', defaultCountry: 'Peru' },
+  { pattern: /\b(?:el\s+yaque|margarita)\b/i, name: 'El Yaque (Isla Margarita)', defaultCity: 'El Yaque', defaultState: 'Nueva Esparta', defaultCountry: 'Venezuela' },
+  { pattern: /\blos\s+roques\b/i, name: 'Los Roques', defaultCity: 'Gran Roque', defaultState: 'Federal Dependencies', defaultCountry: 'Venezuela' },
+  { pattern: /\bad[ií]cora\b/i, name: 'Adícora (Paraguaná)', defaultCity: 'Adícora', defaultState: 'Falcón', defaultCountry: 'Venezuela' },
 ]
 
 function detectBeachAndCity ( candidateTexts: string[] ): { beach: string | null; city: string | null; state: string; country: string } {
