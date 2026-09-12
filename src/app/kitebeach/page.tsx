@@ -10,6 +10,8 @@ import { EditableEmailCell } from '@/components/EditableEmailCell'
 interface KiteBeachSupplier {
   id: string
   name: string
+  destination: string | null
+  spot: string | null
   beach: string | null
   city: string | null
   state: string | null
@@ -33,11 +35,28 @@ interface KiteBeachSupplier {
 
 const COUNTRY_FLAGS: Record<string, string> = {
   Brazil: '🇧🇷',
-  Greece: '🇬🇷',
+  Morocco: '🇲🇦',
+  'Cape Verde': '🇨🇻',
+  Mexico: '🇲🇽',
+  Portugal: '🇵🇹',
+  'Dominican Republic': '🇩🇴',
+  Colombia: '🇨🇴',
+  Mauritius: '🇲🇺',
+  Tanzania: '🇹🇿',
+  Kenya: '🇰🇪',
+  Aruba: '🇦🇼',
+  Bonaire: '🇧🇶',
+  Curaçao: '🇨🇼',
+  Barbados: '🇧🇧',
+  'Costa Rica': '🇨🇷',
+  Panama: '🇵🇦',
+  USA: '🇺🇸',
+  Australia: '🇦🇺',
   Spain: '🇪🇸',
-  France: '🇫🇷',
-  Italy: '🇮🇹',
+  Greece: '🇬🇷',
   Egypt: '🇪🇬',
+  Italy: '🇮🇹',
+  France: '🇫🇷',
   'South Africa': '🇿🇦',
   Vietnam: '🇻🇳',
   Philippines: '🇵🇭',
@@ -96,16 +115,33 @@ function KiteBeachPageContent () {
       ),
     },
     {
-      id: 'beach',
-      header: 'Beach / Spot',
-      filter: { type: 'text', placeholder: 'Filter beach...' },
+      id: 'destination',
+      header: 'Destination',
+      filter: { type: 'text', placeholder: 'Filter destination...' },
       cell: ( item ) => (
-        item.beach ? (
+        item.destination ? (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-500/20 w-fit">
+              <span>📍</span>
+              <span>{ item.destination }</span>
+            </span>
+          </div>
+        ) : (
+          <span className="text-muted-foreground text-xs italic">-</span>
+        )
+      ),
+    },
+    {
+      id: 'spot',
+      header: 'Spot',
+      filter: { type: 'text', placeholder: 'Filter spot...' },
+      cell: ( item ) => (
+        ( item.spot || item.beach ) ? (
           <div className="flex flex-col gap-0.5">
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20 w-fit">
-                <span>{ ( item.country && COUNTRY_FLAGS[ item.country ] ) || '🏖️' }</span>
-                <span>{ item.beach }</span>
+                <span>🏖️</span>
+                <span>{ item.spot || item.beach }</span>
               </span>
               { item.state && (
                 <span className="text-[10px] px-1 py-0.2 rounded bg-muted text-muted-foreground font-mono">
@@ -113,7 +149,7 @@ function KiteBeachPageContent () {
                 </span>
               ) }
             </div>
-            { item.city && item.city.toLowerCase() !== item.beach.toLowerCase() && (
+            { item.city && item.city.toLowerCase() !== ( item.spot || item.beach || '' ).toLowerCase() && (
               <span className="text-[11px] text-muted-foreground ml-1">
                 { item.city }
               </span>
@@ -219,16 +255,18 @@ function KiteBeachPageContent () {
   return (
     <DirectoryView<KiteBeachSupplier>
       title="Kite Beach Directory"
-      subtitle="Kite schools, downwinder operators, equipment rentals, and beach accommodations across Brazil & Greece"
+      subtitle="Global kite schools, rental centres, wingfoil clubs, and kite camps across premier destinations"
       activeNav="kitebeach"
       apiEndpoint="/api/kitebeach"
       itemsKey="suppliers"
       sseEvents={ [ 'KITE_BEACH_UPDATED', 'KITE_BEACH_DELETED' ] }
       columns={ columns }
-      csvHeaders={ [ 'Name', 'Beach', 'City', 'State', 'Category', 'Rating', 'Reviews', 'Phone', 'Website', 'Instagram', 'Email', 'Address', 'Google Maps URL', 'Contacted' ] }
+      csvHeaders={ [ 'Name', 'Country', 'Destination', 'Spot', 'City', 'State', 'Category', 'Rating', 'Reviews', 'Phone', 'Website', 'Instagram', 'Email', 'Address', 'Google Maps URL', 'Contacted' ] }
       csvRowMapper={ ( s ) => [
         s.name,
-        s.beach,
+        s.country,
+        s.destination,
+        s.spot || s.beach,
         s.city,
         s.state,
         s.category,

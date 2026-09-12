@@ -86,6 +86,8 @@ model KiteBeachSupplier {
   id            String    @id @default(uuid())
   name          String
   beach         String?
+  destination   String?
+  spot          String?
   city          String?
   state         String?   @default("CE")
   country       String?   @default("Brazil")
@@ -108,6 +110,9 @@ model KiteBeachSupplier {
 
   @@index([contacted])
   @@index([beach])
+  @@index([destination])
+  @@index([spot])
+  @@index([country])
   @@index([phone])
   @@index([category])
   @@index([tag])
